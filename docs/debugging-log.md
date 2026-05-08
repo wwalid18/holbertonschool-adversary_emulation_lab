@@ -35,3 +35,13 @@
 - Verified: Get-Service Sysmon64 → Status: Running 
 - Verified: Event ID 1 (Process Create) and Event ID 22 (DNS Query) generating 
 - Key fields confirmed: Image, CommandLine, ParentImage, Hashes, User
+
+## Day 4 — 2026-05-08
+
+### Wazuh Server Verification
+- wazuh-manager: active (running) 
+- wazuh-indexer: active (running) 
+- wazuh-dashboard: active (running) 
+- Dashboard accessible at https://127.0.0.1 
+- Early ECONNREFUSED errors in dashboard log: normal (dashboard started before indexer was ready)
+- Admin login confirmed

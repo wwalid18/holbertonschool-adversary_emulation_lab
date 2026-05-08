@@ -66,3 +66,17 @@ Set-MpPreference -DisableRealtimeMonitoring $true
 | 11 | File Create |
 | 12/13 | Registry |
 | 22 | DNS Query |
+
+## Day 4 — Wazuh Server Verification
+
+### Services Status
+| Service | Status |
+|---|---|
+| wazuh-manager | active (running) |
+| wazuh-indexer | active (running) |
+| wazuh-dashboard | active (running) |
+
+### Access
+- Dashboard URL: https://127.0.0.1
+- Login: admin
+- All 3 services set to enabled (auto-start on boot)
