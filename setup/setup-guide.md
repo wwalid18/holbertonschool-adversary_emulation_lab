@@ -47,3 +47,22 @@ Set-MpPreference -DisableRealtimeMonitoring $true
 ### Snapshot
 - Name: Clean Install
 - State: Windows 10 Pro, Defender off, PSRemoting enabled`
+
+## Day 3 — Sysmon Installation
+
+### Steps Performed
+1. Downloaded Sysmon.zip from Kali HTTP server (no internet on VM)
+2. Downloaded SwiftOnSecurity sysmonconfig-export.xml
+3. Extracted and installed: .\Sysmon64.exe -accepteula -i sysmonconfig.xml
+4. Verified service running: Get-Service Sysmon64 → Running
+5. Verified events generating: Event ID 1 and 22 confirmed
+
+### Key Event IDs Now Active
+| ID | Type |
+|---|---|
+| 1 | Process Create |
+| 3 | Network Connect |
+| 10 | Process Access |
+| 11 | File Create |
+| 12/13 | Registry |
+| 22 | DNS Query |

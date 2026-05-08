@@ -25,3 +25,13 @@
 - **Cause:** Tamper Protection was blocking PowerShell changes
 - **Fix:** Disabled Tamper Protection manually via Windows Security GUI, then toggled Real-time protection OFF
 - **Result:** `Get-MpPreference | Select DisableRealtimeMonitoring` returns True
+
+## Day 3 — 2026-05-08
+
+### Sysmon Installation
+- Downloaded Sysmon.zip and sysmonconfig-export.xml via Kali HTTP server (python3 -m http.server 8080)
+- Reason: VM has no internet (host-only network — expected and correct)
+- Installed Sysmon64 v15.20 with SwiftOnSecurity config (schema 4.50)
+- Verified: Get-Service Sysmon64 → Status: Running 
+- Verified: Event ID 1 (Process Create) and Event ID 22 (DNS Query) generating 
+- Key fields confirmed: Image, CommandLine, ParentImage, Hashes, User
