@@ -24,4 +24,26 @@
 - **Issue:** vboxdrv not found in kernel 6.19.11
 - **Fix:** `sudo dkms autoinstall && sudo modprobe vboxdrv`
 - **Issue:** vboxnet0 not available — /dev/vboxnetctl missing
-- **Fix:** `sudo modprobe vboxnetadp && sudo vboxmanage hostonlyif create`
+- **Fix:** `sudo modprobe vboxnetadp && sudo vboxmanage hostonlyif create
+
+## Day 2 — Post-Install Configuration
+
+### Steps Performed
+1. Set network profile from Public to Private
+2. Set PowerShell execution policy to Unrestricted
+3. Enabled PSRemoting via Enable-PSRemoting -Force
+4. Disabled Tamper Protection manually via Windows Security GUI
+5. Disabled Defender real-time protection — confirmed DisableRealtimeMonitoring: True
+6. Took VM snapshot: "Clean Install"
+
+### Commands Used
+```powershell
+Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private
+Set-ExecutionPolicy Unrestricted -Force
+Enable-PSRemoting -Force
+Set-MpPreference -DisableRealtimeMonitoring $true
+```
+
+### Snapshot
+- Name: Clean Install
+- State: Windows 10 Pro, Defender off, PSRemoting enabled`

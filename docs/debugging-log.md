@@ -13,3 +13,15 @@
 - **Cause:** vboxnetadp module not loaded
 - **Fix:** `sudo modprobe vboxnetadp` then `sudo vboxmanage hostonlyif create`
 - **Result:** vboxnet0 created, VM gets 192.168.56.x IP 
+
+## Day 2 — 2026-05-08
+
+### Issue: Enable-PSRemoting failed — network set to Public
+- **Error:** WinRM firewall exception won't work on Public network
+- **Fix:** `Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private`
+- **Result:** PSRemoting enabled successfully 
+
+### Issue: Set-MpPreference didn't disable Defender
+- **Cause:** Tamper Protection was blocking PowerShell changes
+- **Fix:** Disabled Tamper Protection manually via Windows Security GUI, then toggled Real-time protection OFF
+- **Result:** `Get-MpPreference | Select DisableRealtimeMonitoring` returns True
