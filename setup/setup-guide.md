@@ -80,3 +80,30 @@ Set-MpPreference -DisableRealtimeMonitoring $true
 - Dashboard URL: https://127.0.0.1
 - Login: admin
 - All 3 services set to enabled (auto-start on boot)
+
+## Day 5 — Wazuh Agent Installation
+
+### Steps Performed
+1. Downloaded wazuh-agent-4.7.5-1.msi via Kali HTTP server
+2. Installed: msiexec /i wazuh-agent.msi /q WAZUH_MANAGER='192.168.56.1' WAZUH_AGENT_NAME='Win10-Victim'
+3. Started service: NET START WazuhSvc
+4. Added Sysmon localfile block to ossec.conf:
+
+```xml
+<localfile>
+  <location>Microsoft-Windows-Sysmon/Operational</location>
+  <log_format>eventchannel</log_format>
+</localfile>
+```
+
+5. Restarted WazuhSvc — confirmed Active in dashboard
+
+## Day 6 — End-to-End Telemetry Verification
+
+### Test Performed
+- Ran whoami, net user, ipconfig on Windows VM
+- Confirmed Sysmon events in Wazuh dashboard within 30 seconds
+- Filter used: rule.groups: sysmon
+
+### Result
+- Full telemetry pipeline working: Windows → Sysmon → Wazuh Agent → Wazuh Server 

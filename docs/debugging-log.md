@@ -45,3 +45,25 @@
 - Dashboard accessible at https://127.0.0.1 
 - Early ECONNREFUSED errors in dashboard log: normal (dashboard started before indexer was ready)
 - Admin login confirmed
+
+## Day 5-6 — 2026-05-08
+
+### Wazuh Agent Installation
+- Downloaded wazuh-agent-4.7.5-1.msi via Kali HTTP server (no internet on VM)
+- Installed with WAZUH_MANAGER=192.168.56.1, WAZUH_AGENT_NAME=Win10-Victim
+- NET START WazuhSvc → started successfully 
+- Win10-Victim showing Active (green) in Wazuh dashboard 
+
+### Issue: Sysmon events not appearing in Wazuh
+- **Cause:** ossec.conf missing Sysmon localfile block
+- **Fix:** Added localfile block for Microsoft-Windows-Sysmon/Operational
+- **Issue 2:** First edit placed block outside </ossec_config> tag
+- **Error:** (1230): Invalid element in the configuration: 'localfile'
+- **Fix:** Used PowerShell regex to remove bad block and reinsert correctly
+- **Result:** Sysmon events flowing into Wazuh dashboard 
+
+### End-to-End Telemetry Verified
+- Ran whoami, net user, ipconfig on Windows VM
+- Sysmon Event ID 1 (process create) visible in Wazuh within 30 seconds 
+- rule.groups: sysmon filter confirmed working 
+- VM IP confirmed: 192.168.56.101 
