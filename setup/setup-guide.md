@@ -107,3 +107,32 @@ Set-MpPreference -DisableRealtimeMonitoring $true
 
 ### Result
 - Full telemetry pipeline working: Windows → Sysmon → Wazuh Agent → Wazuh Server 
+
+## Day 7 — Caldera Setup & Final Snapshot
+
+### Caldera Installation
+- Python 3.11.9 compiled from source (Kali only has 3.13)
+- Caldera 5.2.0 installed in venv: python3.11 -m venv .calderavenv
+- Requirements installed excluding donut-shellcode
+- local.yml created with app.contact.http: http://192.168.56.1:8888
+
+### Starting Caldera
+```bash
+cd ~/caldera
+source .calderavenv/bin/activate
+python3 server.py --insecure
+```
+
+### Sandcat Agent Deployment
+- Campaigns → Agents → Deploy Agent → Sandcat → Windows → PowerShell
+- Replace 0.0.0.0 with 192.168.56.1 in generated command
+- Run on Windows VM as Administrator
+- Agent appears in Caldera UI within 60 seconds
+
+### Wazuh Dashboard Fixes
+- SSL cert symlinks: dashboard-key.pem → wazuh-dashboard-key.pem
+- opensearch.hosts: changed localhost to 127.0.0.1
+
+### Final Snapshot
+- Name: Lab Ready — Week 2 Start
+- State: Wazuh agent active, Sysmon running, Caldera tested

@@ -67,3 +67,43 @@
 - Sysmon Event ID 1 (process create) visible in Wazuh within 30 seconds 
 - rule.groups: sysmon filter confirmed working 
 - VM IP confirmed: 192.168.56.101 
+
+## Day 7 — 2026-05-13
+
+### Caldera Installation Issues
+- Caldera 5.0 incompatible with Python 3.13 (aiohttp, lxml, distutils issues)
+- Fix: Compiled Python 3.11.9 from source (deadsnakes PPA not available on Kali)
+- Fix: Installed Caldera 5.2.0 in Python 3.11 venv, excluded donut-shellcode
+- Fix: Created local.yml with app.contact.http: http://192.168.56.1:8888
+- Result: Caldera running, API responding 
+
+### Sandcat Agent Connection Issues
+- Generated command used 0.0.0.0 — replaced with 192.168.56.1
+- Agent beaconed (ALIVE) but didn't appear in UI
+- Fix: local.yml contact.http was missing on reinstall — recreated
+- Result: Agent registered, paw: nmqubm, Win10-Victim Active 
+
+### Recurring VirtualBox Kernel Module Issues
+- Kernel updated multiple times (6.18 → 6.19.11 → 6.19.14)
+- Fix each time: sudo dkms autoinstall && sudo modprobe vboxdrv vboxnetflt vboxnetadp
+- Permanent fix: /etc/modules-load.d/virtualbox.conf created
+- vboxnet0 had to be recreated after each kernel update
+
+### Wazuh Dashboard SSL Certificate Issue
+- Error: dashboard-key.pem not found
+- Cause: certs named wazuh-dashboard-key.pem not dashboard-key.pem
+- Fix: Created symlinks to match expected filenames
+- Result: Dashboard accessible 
+
+### Wazuh Dashboard IPv6 Issue
+- Error: ECONNREFUSED ::1:9200 (dashboard trying IPv6)
+- Cause: opensearch.hosts set to localhost (resolves to ::6 on Kali)
+- Fix: Changed localhost to 127.0.0.1 in opensearch_dashboards.yml
+- Result: Dashboard fully connected to indexer 
+
+### Final State
+- Caldera running on Python 3.11.9 venv 
+- Sandcat agent connected: Win10-Victim, group: red, contact: HTTP 
+- Wazuh dashboard accessible at https://127.0.0.1 
+- Win10-Victim agent Active in Wazuh 
+- Snapshot taken: Lab Ready — Week 2 Start 
