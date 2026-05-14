@@ -136,3 +136,97 @@ python3 server.py --insecure
 ### Final Snapshot
 - Name: Lab Ready — Week 2 Start
 - State: Wazuh agent active, Sysmon running, Caldera tested
+
+
+## Day 8 — Atomic Red Team Offline Installation
+
+### Steps Performed
+1. Staged all files on Kali HTTP server (VM has no internet)
+2. Downloaded invoke-atomicredteam v2.1.0 and powershell-yaml v0.4.12 zips
+3. Downloaded T1059.001, T1547.001, T1087.001 YAML files individually
+4. Installed invoke-atomicredteam module on Win10-Victim
+5. Installed powershell-yaml dependency manually
+6. Downloaded atomic YAML files to C:\AtomicRedTeam\atomics\
+7. Verified full pipeline: modules loaded, YAMLs parsed, Sysmon EID 1 firing
+8. Took snapshot: "ART Installed"
+
+### Kali — Stage and Serve Files
+```bash
+mkdir -p ~/art-offline && cd ~/art-offline
+
+curl -L https://github.com/redcanaryco/invoke-atomicredteam/archive/refs/heads/master.zip \
+  -o invoke-atomicredteam.zip
+
+curl -L "https://www.powershellgallery.com/api/v2/package/powershell-yaml" \
+  -o powershell-yaml.zip
+
+mkdir -p atomics
+for t in T1059.001 T1547.001 T1087.001; do
+  mkdir -p atomics/$t
+  curl -L "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/$t/$t.yaml" \
+    -o atomics/$t/$t.yaml
+done
+
+python3 -m http.server 8080
+```
+
+### Win10-Victim — Install (PowerShell as Administrator)
+```powershell
+Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
+$kali = "http://192.168.56.1:8080"
+
+# invoke-atomicredteam
+IWR "$kali/invoke-atomicredteam.zip" -OutFile "$env:TEMP\invoke-atomicredteam.zip" -UseBasicParsing
+$modRoot = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\invoke-atomicredteam"
+New-Item -ItemType Directory -Force -Path $modRoot
+Expand-Archive "$env:TEMP\invoke-atomicredteam.zip" -DestinationPath $modRoot -Force
+# Fix GitHub zip nesting
+$nested = "$modRoot\invoke-atomicredteam-master"
+Get-ChildItem $nested -Force | Move-Item -Destination $modRoot -Force
+Remove-Item $nested -Recurse -Force
+
+# powershell-yaml — do NOT flatten subfolders, lib\ must stay intact
+IWR "$kali/powershell-yaml.zip" -OutFile "$env:TEMP\powershell-yaml.zip" -UseBasicParsing
+$yamlDest = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml"
+New-Item -ItemType Directory -Force -Path $yamlDest
+Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath $yamlDest -Force
+
+# Atomics
+foreach ($t in @("T1059.001","T1547.001","T1087.001")) {
+    $dir = "C:\AtomicRedTeam\atomics\$t"
+    New-Item -ItemType Directory -Force -Path $dir
+    IWR "$kali/atomics/$t/$t.yaml" -OutFile "$dir\$t.yaml" -UseBasicParsing
+}
+
+# Import and verify
+Import-Module powershell-yaml -Force
+Import-Module invoke-atomicredteam -Force
+Get-Command Invoke-AtomicTest
+```
+
+### Versions Installed
+| Package | Version |
+|---|---|
+| invoke-atomicredteam | 2.1.0 |
+| powershell-yaml | 0.4.12 |
+| Atomic tests — T1059.001 | 22 tests |
+| Atomic tests — T1547.001 | 20 tests |
+| Atomic tests — T1087.001 | 11 tests |
+
+### Issues & Fixes
+- **Issue:** `Import-Module` failed — module not found
+- **Cause:** GitHub zip extracts into nested `invoke-atomicredteam-master\` subfolder
+- **Fix:** Moved contents up one level, removed nested folder
+
+- **Issue:** `powershell-yaml` dependency missing
+- **Cause:** Not bundled with invoke-atomicredteam, VM has no internet
+- **Fix:** Downloaded nupkg from PowerShell Gallery on Kali, served via HTTP, installed manually
+
+- **Issue:** `LoadFile` error — YAML DLLs not found
+- **Cause:** Accidentally flattened `lib\` subfolder in powershell-yaml during nested-folder fix
+- **Fix:** Removed broken install, re-extracted zip cleanly without touching subfolders
+
+### Snapshot
+- Name: ART Installed
+- State: ART 2.1.0 installed, Sysmon EID 1 pipeline verified, Wazuh agent Active
+

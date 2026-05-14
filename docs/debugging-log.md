@@ -107,3 +107,52 @@
 - Wazuh dashboard accessible at https://127.0.0.1 
 - Win10-Victim agent Active in Wazuh 
 - Snapshot taken: Lab Ready — Week 2 Start 
+
+# Debugging Log — Week 2
+
+## Day 8 — 2026-05-14
+
+### Issue: invoke-atomicredteam module not found after extraction
+- **Error:** `Import-Module : The specified module 'invoke-atomicredteam' was not loaded because no valid module file was found`
+- **Cause:** GitHub zip extracts into a nested `invoke-atomicredteam-master\` subfolder; PowerShell expects the `.psd1` at the module root
+- **Fix:**
+```powershell
+  $modRoot = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\invoke-atomicredteam"
+  $nested  = "$modRoot\invoke-atomicredteam-master"
+  Get-ChildItem $nested -Force | Move-Item -Destination $modRoot -Force
+  Remove-Item $nested -Recurse -Force
+```
+- **Result:** `Invoke-AtomicRedTeam.psd1` found at module root, module recognized 
+
+### Issue: powershell-yaml dependency missing
+- **Error:** `Import-Module : The required module 'powershell-yaml' is not loaded`
+- **Cause:** invoke-atomicredteam v2.1.0 requires powershell-yaml; not included in the zip and VM has no internet
+- **Fix:** Downloaded `powershell-yaml` nupkg from PowerShell Gallery on Kali, served via `python3 -m http.server 8080`, installed manually on Win10-Victim:
+```powershell
+  IWR "http://192.168.56.1:8080/powershell-yaml.zip" -OutFile "$env:TEMP\powershell-yaml.zip" -UseBasicParsing
+  Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
+    "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Force
+```
+- **Result:** powershell-yaml v0.4.12 loaded successfully 
+
+### Issue: LoadFile error for YAML DLLs after accidental lib folder move
+- **Error:** `Exception calling "LoadFile" with "1" argument(s): The system cannot find the file specified`
+- **Cause:** Ran the nested-folder fix on powershell-yaml which moved `lib\` contents up, breaking the relative DLL paths in `powershell-yaml.psm1`
+- **Fix:** Removed the broken install and re-extracted the zip cleanly without moving any subfolders:
+```powershell
+  Remove-Item "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Recurse -Force
+  Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
+    "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Force
+```
+- **Result:** DLLs load correctly, ConvertFrom-Yaml functional 
+
+### Verification results
+- invoke-atomicredteam v2.1.0 loaded 
+- powershell-yaml v0.4.12 loaded 
+- T1059.001 — 22 tests parsed 
+- T1547.001 — 20 tests parsed 
+- T1087.001 — 11 tests parsed 
+- Wazuh agent: Running 
+- Sysmon64: Running 
+- Sysmon EID 1 pipeline: verified (whoami → EID 1 captured) 
+- Snapshot taken: "ART Installed" 
