@@ -1,0 +1,89 @@
+{
+  "_index": "wazuh-alerts-4.x-2026.05.19",
+  "_id": "fa6xP54BZJT05nIrcZI7",
+  "_score": null,
+  "_source": {
+    "input": {
+      "type": "log"
+    },
+    "agent": {
+      "ip": "192.168.56.101",
+      "name": "Win10-Victim",
+      "id": "001"
+    },
+    "manager": {
+      "name": "kali"
+    },
+    "data": {
+      "win": {
+        "eventdata": {
+          "image": "C:\\\\Windows\\\\system32\\\\reg.exe",
+          "targetObject": "HKU\\\\S-1-5-21-2438391329-815147474-3294604396-1000\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\\Atomic Red Team",
+          "processGuid": "{eb6f0a9a-3598-6a0c-6703-000000000800}",
+          "processId": "7964",
+          "utcTime": "2026-05-19 10:04:08.360",
+          "ruleName": "T1060,RunKey",
+          "details": "C:\\\\Path\\\\AtomicRedTeam.exe",
+          "eventType": "SetValue",
+          "user": "WIN10-VICTIM\\\\walid"
+        },
+        "system": {
+          "eventID": "13",
+          "keywords": "0x8000000000000000",
+          "providerGuid": "{5770385f-c22a-43e0-bf4c-06f5698ffbd9}",
+          "level": "4",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "opcode": "0",
+          "message": "\"Registry value set:\r\nRuleName: T1060,RunKey\r\nEventType: SetValue\r\nUtcTime: 2026-05-19 10:04:08.360\r\nProcessGuid: {eb6f0a9a-3598-6a0c-6703-000000000800}\r\nProcessId: 7964\r\nImage: C:\\Windows\\system32\\reg.exe\r\nTargetObject: HKU\\S-1-5-21-2438391329-815147474-3294604396-1000\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\Atomic Red Team\r\nDetails: C:\\Path\\AtomicRedTeam.exe\r\nUser: WIN10-VICTIM\\walid\"",
+          "version": "2",
+          "systemTime": "2026-05-19T10:04:08.3635415Z",
+          "eventRecordID": "3574",
+          "threadID": "4576",
+          "computer": "Win10-Victim",
+          "task": "13",
+          "processID": "2592",
+          "severityValue": "INFORMATION",
+          "providerName": "Microsoft-Windows-Sysmon"
+        }
+      }
+    },
+    "rule": {
+      "firedtimes": 1,
+      "mail": false,
+      "level": 6,
+      "description": "Registry entry to be executed on next logon was modified using command line application reg.exe",
+      "groups": [
+        "sysmon",
+        "sysmon_eid13_detections",
+        "windows"
+      ],
+      "mitre": {
+        "technique": [
+          "Registry Run Keys / Startup Folder"
+        ],
+        "id": [
+          "T1547.001"
+        ],
+        "tactic": [
+          "Persistence",
+          "Privilege Escalation"
+        ]
+      },
+      "id": "92302"
+    },
+    "location": "EventChannel",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "id": "1779185049.628933",
+    "timestamp": "2026-05-19T11:04:09.105+0100"
+  },
+  "fields": {
+    "timestamp": [
+      "2026-05-19T10:04:09.105Z"
+    ]
+  },
+  "sort": [
+    1779185049105
+  ]
+}
