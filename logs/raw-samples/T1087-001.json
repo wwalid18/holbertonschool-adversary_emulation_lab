@@ -1,0 +1,106 @@
+{
+  "_index": "wazuh-alerts-4.x-2026.05.19",
+  "_id": "Kq7BP54BZJT05nIruJP0",
+  "_score": null,
+  "_source": {
+    "input": {
+      "type": "log"
+    },
+    "agent": {
+      "ip": "192.168.56.101",
+      "name": "Win10-Victim",
+      "id": "001"
+    },
+    "manager": {
+      "name": "kali"
+    },
+    "data": {
+      "win": {
+        "eventdata": {
+          "originalFileName": "net.exe",
+          "image": "C:\\\\Windows\\\\System32\\\\net.exe",
+          "product": "Microsoft® Windows® Operating System",
+          "parentProcessGuid": "{eb6f0a9a-39c1-6a0c-f702-000000000800}",
+          "description": "Net Command",
+          "logonGuid": "{eb6f0a9a-afda-6a05-48c9-030000000000}",
+          "parentCommandLine": "\\\"cmd.exe\\\" /c net user &amp; dir c:\\\\Users\\\\ &amp; cmdkey.exe /list &amp; net localgroup \\\"Users\\\" &amp; net localgroup",
+          "processGuid": "{eb6f0a9a-39c1-6a0c-f902-000000000800}",
+          "logonId": "0x3c948",
+          "parentProcessId": "3580",
+          "processId": "1728",
+          "currentDirectory": "C:\\\\Users\\\\walid\\\\AppData\\\\Local\\\\Temp\\\\",
+          "utcTime": "2026-05-19 10:21:53.543",
+          "hashes": "MD5=0BD94A338EEA5A4E1F2830AE326E6D19,SHA256=9F376759BCBCD705F726460FC4A7E2B07F310F52BAA73CAAAAA124FDDBDF993E,IMPHASH=57F0C47AE2A1A2C06C8B987372AB0B07",
+          "parentImage": "C:\\\\Windows\\\\System32\\\\cmd.exe",
+          "company": "Microsoft Corporation",
+          "commandLine": "net  user",
+          "integrityLevel": "High",
+          "fileVersion": "10.0.19041.1 (WinBuild.160101.0800)",
+          "user": "WIN10-VICTIM\\\\walid",
+          "terminalSessionId": "1",
+          "parentUser": "WIN10-VICTIM\\\\walid"
+        },
+        "system": {
+          "eventID": "1",
+          "keywords": "0x8000000000000000",
+          "providerGuid": "{5770385f-c22a-43e0-bf4c-06f5698ffbd9}",
+          "level": "4",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "opcode": "0",
+          "message": "\"Process Create:\r\nRuleName: -\r\nUtcTime: 2026-05-19 10:21:53.543\r\nProcessGuid: {eb6f0a9a-39c1-6a0c-f902-000000000800}\r\nProcessId: 1728\r\nImage: C:\\Windows\\System32\\net.exe\r\nFileVersion: 10.0.19041.1 (WinBuild.160101.0800)\r\nDescription: Net Command\r\nProduct: Microsoft® Windows® Operating System\r\nCompany: Microsoft Corporation\r\nOriginalFileName: net.exe\r\nCommandLine: net  user \r\nCurrentDirectory: C:\\Users\\walid\\AppData\\Local\\Temp\\\r\nUser: WIN10-VICTIM\\walid\r\nLogonGuid: {eb6f0a9a-afda-6a05-48c9-030000000000}\r\nLogonId: 0x3C948\r\nTerminalSessionId: 1\r\nIntegrityLevel: High\r\nHashes: MD5=0BD94A338EEA5A4E1F2830AE326E6D19,SHA256=9F376759BCBCD705F726460FC4A7E2B07F310F52BAA73CAAAAA124FDDBDF993E,IMPHASH=57F0C47AE2A1A2C06C8B987372AB0B07\r\nParentProcessGuid: {eb6f0a9a-39c1-6a0c-f702-000000000800}\r\nParentProcessId: 3580\r\nParentImage: C:\\Windows\\System32\\cmd.exe\r\nParentCommandLine: \"cmd.exe\" /c net user & dir c:\\Users\\ & cmdkey.exe /list & net localgroup \"Users\" & net localgroup\r\nParentUser: WIN10-VICTIM\\walid\"",
+          "version": "5",
+          "systemTime": "2026-05-19T10:21:53.5476310Z",
+          "eventRecordID": "3469",
+          "threadID": "4576",
+          "computer": "Win10-Victim",
+          "task": "1",
+          "processID": "2592",
+          "severityValue": "INFORMATION",
+          "providerName": "Microsoft-Windows-Sysmon"
+        }
+      }
+    },
+    "rule": {
+      "firedtimes": 1,
+      "mail": false,
+      "level": 3,
+      "description": "A C:\\\\Windows\\\\System32\\\\net.exe binary was started by a Windows cmd shell",
+      "groups": [
+        "sysmon",
+        "sysmon_eid1_detections",
+        "windows"
+      ],
+      "mitre": {
+        "technique": [
+          "Windows Command Shell",
+          "DLL Search Order Hijacking"
+        ],
+        "id": [
+          "T1059.003",
+          "T1574.001"
+        ],
+        "tactic": [
+          "Execution",
+          "Persistence",
+          "Privilege Escalation",
+          "Defense Evasion"
+        ]
+      },
+      "id": "92036"
+    },
+    "location": "EventChannel",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "id": "1779186114.1180428",
+    "timestamp": "2026-05-19T11:21:54.332+0100"
+  },
+  "fields": {
+    "timestamp": [
+      "2026-05-19T10:21:54.332Z"
+    ]
+  },
+  "sort": [
+    1779186114332
+  ]
+}
