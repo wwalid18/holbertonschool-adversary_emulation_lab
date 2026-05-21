@@ -6,20 +6,20 @@
 - **Error:** Module vboxdrv not found in /lib/modules/6.19.11+kali-amd64
 - **Cause:** Kernel updated to 6.19.11 but DKMS built for 6.18.5
 - **Fix:** `sudo dkms autoinstall` rebuilt the module for the running kernel
-- **Result:** `lsmod | grep vbox` confirmed vboxdrv loaded 
+- **Result:** `lsmod | grep vbox` confirmed vboxdrv loaded
 
 ### Issue 2: vboxnet0 not available
 - **Error:** failed to open /dev/vboxnetctl: No such file or directory
 - **Cause:** vboxnetadp module not loaded
 - **Fix:** `sudo modprobe vboxnetadp` then `sudo vboxmanage hostonlyif create`
-- **Result:** vboxnet0 created, VM gets 192.168.56.x IP 
+- **Result:** vboxnet0 created, VM gets 192.168.56.x IP
 
 ## Day 2 — 2026-05-08
 
 ### Issue: Enable-PSRemoting failed — network set to Public
 - **Error:** WinRM firewall exception won't work on Public network
 - **Fix:** `Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private`
-- **Result:** PSRemoting enabled successfully 
+- **Result:** PSRemoting enabled successfully
 
 ### Issue: Set-MpPreference didn't disable Defender
 - **Cause:** Tamper Protection was blocking PowerShell changes
@@ -32,17 +32,17 @@
 - Downloaded Sysmon.zip and sysmonconfig-export.xml via Kali HTTP server (python3 -m http.server 8080)
 - Reason: VM has no internet (host-only network — expected and correct)
 - Installed Sysmon64 v15.20 with SwiftOnSecurity config (schema 4.50)
-- Verified: Get-Service Sysmon64 → Status: Running 
-- Verified: Event ID 1 (Process Create) and Event ID 22 (DNS Query) generating 
+- Verified: Get-Service Sysmon64 — Status: Running
+- Verified: Event ID 1 (Process Create) and Event ID 22 (DNS Query) generating
 - Key fields confirmed: Image, CommandLine, ParentImage, Hashes, User
 
 ## Day 4 — 2026-05-08
 
 ### Wazuh Server Verification
-- wazuh-manager: active (running) 
-- wazuh-indexer: active (running) 
-- wazuh-dashboard: active (running) 
-- Dashboard accessible at https://127.0.0.1 
+- wazuh-manager: active (running)
+- wazuh-indexer: active (running)
+- wazuh-dashboard: active (running)
+- Dashboard accessible at https://127.0.0.1
 - Early ECONNREFUSED errors in dashboard log: normal (dashboard started before indexer was ready)
 - Admin login confirmed
 
@@ -51,8 +51,8 @@
 ### Wazuh Agent Installation
 - Downloaded wazuh-agent-4.7.5-1.msi via Kali HTTP server (no internet on VM)
 - Installed with WAZUH_MANAGER=192.168.56.1, WAZUH_AGENT_NAME=Win10-Victim
-- NET START WazuhSvc → started successfully 
-- Win10-Victim showing Active (green) in Wazuh dashboard 
+- NET START WazuhSvc — started successfully
+- Win10-Victim showing Active (green) in Wazuh dashboard
 
 ### Issue: Sysmon events not appearing in Wazuh
 - **Cause:** ossec.conf missing Sysmon localfile block
@@ -60,13 +60,13 @@
 - **Issue 2:** First edit placed block outside </ossec_config> tag
 - **Error:** (1230): Invalid element in the configuration: 'localfile'
 - **Fix:** Used PowerShell regex to remove bad block and reinsert correctly
-- **Result:** Sysmon events flowing into Wazuh dashboard 
+- **Result:** Sysmon events flowing into Wazuh dashboard
 
 ### End-to-End Telemetry Verified
 - Ran whoami, net user, ipconfig on Windows VM
-- Sysmon Event ID 1 (process create) visible in Wazuh within 30 seconds 
-- rule.groups: sysmon filter confirmed working 
-- VM IP confirmed: 192.168.56.101 
+- Sysmon Event ID 1 (process create) visible in Wazuh within 30 seconds
+- rule.groups: sysmon filter confirmed working
+- VM IP confirmed: 192.168.56.101
 
 ## Day 7 — 2026-05-13
 
@@ -75,38 +75,40 @@
 - Fix: Compiled Python 3.11.9 from source (deadsnakes PPA not available on Kali)
 - Fix: Installed Caldera 5.2.0 in Python 3.11 venv, excluded donut-shellcode
 - Fix: Created local.yml with app.contact.http: http://192.168.56.1:8888
-- Result: Caldera running, API responding 
+- Result: Caldera running, API responding
 
 ### Sandcat Agent Connection Issues
 - Generated command used 0.0.0.0 — replaced with 192.168.56.1
-- Agent beaconed (ALIVE) but didn't appear in UI
+- Agent beaconed (ALIVE) but did not appear in UI
 - Fix: local.yml contact.http was missing on reinstall — recreated
-- Result: Agent registered, paw: nmqubm, Win10-Victim Active 
+- Result: Agent registered, paw: nmqubm, Win10-Victim Active
 
 ### Recurring VirtualBox Kernel Module Issues
-- Kernel updated multiple times (6.18 → 6.19.11 → 6.19.14)
+- Kernel updated multiple times (6.18 — 6.19.11 — 6.19.14)
 - Fix each time: sudo dkms autoinstall && sudo modprobe vboxdrv vboxnetflt vboxnetadp
 - Permanent fix: /etc/modules-load.d/virtualbox.conf created
 - vboxnet0 had to be recreated after each kernel update
 
 ### Wazuh Dashboard SSL Certificate Issue
-- Error: dashboard-key.pem not found
-- Cause: certs named wazuh-dashboard-key.pem not dashboard-key.pem
-- Fix: Created symlinks to match expected filenames
-- Result: Dashboard accessible 
+- **Error:** dashboard-key.pem not found
+- **Cause:** certs named wazuh-dashboard-key.pem not dashboard-key.pem
+- **Fix:** Created symlinks to match expected filenames
+- **Result:** Dashboard accessible
 
 ### Wazuh Dashboard IPv6 Issue
-- Error: ECONNREFUSED ::1:9200 (dashboard trying IPv6)
-- Cause: opensearch.hosts set to localhost (resolves to ::6 on Kali)
-- Fix: Changed localhost to 127.0.0.1 in opensearch_dashboards.yml
-- Result: Dashboard fully connected to indexer 
+- **Error:** ECONNREFUSED ::1:9200 (dashboard trying IPv6)
+- **Cause:** opensearch.hosts set to localhost (resolves to ::6 on Kali)
+- **Fix:** Changed localhost to 127.0.0.1 in opensearch_dashboards.yml
+- **Result:** Dashboard fully connected to indexer
 
 ### Final State
-- Caldera running on Python 3.11.9 venv 
-- Sandcat agent connected: Win10-Victim, group: red, contact: HTTP 
-- Wazuh dashboard accessible at https://127.0.0.1 
-- Win10-Victim agent Active in Wazuh 
-- Snapshot taken: Lab Ready — Week 2 Start 
+- Caldera running on Python 3.11.9 venv
+- Sandcat agent connected: Win10-Victim, group: red, contact: HTTP
+- Wazuh dashboard accessible at https://127.0.0.1
+- Win10-Victim agent Active in Wazuh
+- Snapshot taken: Lab Ready — Week 2 Start
+
+---
 
 # Debugging Log — Week 2
 
@@ -117,42 +119,83 @@
 - **Cause:** GitHub zip extracts into a nested `invoke-atomicredteam-master\` subfolder; PowerShell expects the `.psd1` at the module root
 - **Fix:**
 ```powershell
-  $modRoot = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\invoke-atomicredteam"
-  $nested  = "$modRoot\invoke-atomicredteam-master"
-  Get-ChildItem $nested -Force | Move-Item -Destination $modRoot -Force
-  Remove-Item $nested -Recurse -Force
+$modRoot = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\invoke-atomicredteam"
+$nested  = "$modRoot\invoke-atomicredteam-master"
+Get-ChildItem $nested -Force | Move-Item -Destination $modRoot -Force
+Remove-Item $nested -Recurse -Force
 ```
-- **Result:** `Invoke-AtomicRedTeam.psd1` found at module root, module recognized 
+- **Result:** `Invoke-AtomicRedTeam.psd1` found at module root, module recognized
 
 ### Issue: powershell-yaml dependency missing
 - **Error:** `Import-Module : The required module 'powershell-yaml' is not loaded`
 - **Cause:** invoke-atomicredteam v2.1.0 requires powershell-yaml; not included in the zip and VM has no internet
 - **Fix:** Downloaded `powershell-yaml` nupkg from PowerShell Gallery on Kali, served via `python3 -m http.server 8080`, installed manually on Win10-Victim:
 ```powershell
-  IWR "http://192.168.56.1:8080/powershell-yaml.zip" -OutFile "$env:TEMP\powershell-yaml.zip" -UseBasicParsing
-  Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
-    "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Force
+IWR "http://192.168.56.1:8080/powershell-yaml.zip" -OutFile "$env:TEMP\powershell-yaml.zip" -UseBasicParsing
+Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
+  "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Force
 ```
-- **Result:** powershell-yaml v0.4.12 loaded successfully 
+- **Result:** powershell-yaml v0.4.12 loaded successfully
 
 ### Issue: LoadFile error for YAML DLLs after accidental lib folder move
 - **Error:** `Exception calling "LoadFile" with "1" argument(s): The system cannot find the file specified`
 - **Cause:** Ran the nested-folder fix on powershell-yaml which moved `lib\` contents up, breaking the relative DLL paths in `powershell-yaml.psm1`
 - **Fix:** Removed the broken install and re-extracted the zip cleanly without moving any subfolders:
 ```powershell
-  Remove-Item "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Recurse -Force
-  Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
-    "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Force
+Remove-Item "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Recurse -Force
+Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
+  "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\powershell-yaml" -Force
 ```
-- **Result:** DLLs load correctly, ConvertFrom-Yaml functional 
+- **Result:** DLLs load correctly, ConvertFrom-Yaml functional
 
 ### Verification results
-- invoke-atomicredteam v2.1.0 loaded 
-- powershell-yaml v0.4.12 loaded 
-- T1059.001 — 22 tests parsed 
-- T1547.001 — 20 tests parsed 
-- T1087.001 — 11 tests parsed 
-- Wazuh agent: Running 
-- Sysmon64: Running 
-- Sysmon EID 1 pipeline: verified (whoami → EID 1 captured) 
-- Snapshot taken: "ART Installed" 
+- invoke-atomicredteam v2.1.0 loaded
+- powershell-yaml v0.4.12 loaded
+- T1059.001 — 22 tests parsed
+- T1547.001 — 20 tests parsed
+- T1087.001 — 11 tests parsed
+- Wazuh agent: Running
+- Sysmon64: Running
+- Sysmon EID 1 pipeline: verified (whoami — EID 1 captured)
+- Snapshot taken: ART Installed
+
+---
+
+# Debugging Log — Week 3
+
+## Day 15 — 2026-05-19
+
+- Wrote all 4 Sigma rules from scratch based on real Wazuh alert JSON logs collected in Week 2
+- Rules based on actual Sysmon field values — no assumptions used
+- T1059-001: matched on CommandLine not Image — real log showed cmd.exe as image, not powershell.exe directly
+- T1547-001: used TargetObject|contains on \CurrentVersion\Run\ — HKCU appears as HKU\<SID> in real Sysmon logs
+- T1087-001: correct MITRE tag T1087.001 applied — Wazuh rule 92036 incorrectly tags this as T1059.003 + T1574.001
+- T1003-001: dual-condition rule written — EID 1 (immediate) + EID 10 (requires Sysmon config fix on Day 17)
+
+## Day 16 — 2026-05-19
+
+### Review: T1059-001
+- Simulated real log CommandLine through detection condition
+- Double space in `powershell.exe -e  <blob>` — contains modifier handles this correctly, no fix needed
+- Evasion check: `-w hidden -e`, `-nop -e` — encoded flag still present, rule still catches it
+- Rule finalized, no changes required
+
+### Review: T1547-001
+- Simulated TargetObject `HKU\S-1-5-21-...\CurrentVersion\Run\Atomic Red Team` through detection condition
+- `\CurrentVersion\Run\` is contained within the real path — match confirmed
+- RunOnce variant covered by second contains entry
+- Rule finalized, no changes required
+
+### Review: T1087-001
+- Simulated `net  user` (double space) through `CommandLine|contains: ' user'` — space+user present, match confirmed
+- Case sensitivity check: Sigma contains is case-insensitive in Wazuh backend — `NET USER` still matches
+- Rule finalized, no changes required
+
+### Issue: T1003-001 — taskmgr.exe incorrectly included in filter_system block
+- **Finding:** `taskmgr.exe` was included in the legitimate process filter for EID 10
+- **Problem:** Task Manager accessing lsass is a known living-off-the-land technique — attackers can use it to dump lsass memory without any third-party tools, bypassing the rule entirely if filtered out
+- **Fix:** Removed `\Windows\System32\taskmgr.exe` from the filter_system block in T1003-001-lsass-access.yml
+- **Also:** Updated falsepositives section — replaced "Task Manager is a false positive" with "Task Manager alerts are intentional — investigate every one"
+- **Result:** Rule now catches taskmgr.exe opening lsass.exe via EID 10
+
+### All 4 rules finalized
