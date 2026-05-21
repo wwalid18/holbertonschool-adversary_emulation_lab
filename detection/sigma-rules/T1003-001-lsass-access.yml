@@ -1,0 +1,125 @@
+title: LSASS Memory Access - Credential Dumping via Out-Minidump or Process Access
+id: d4e5f6a7-b8c9-0123-defa-234567890123
+status: stable
+
+description: >
+  Detects credential dumping targeting lsass.exe via two complementary conditions:
+
+  CONDITION 1 — EID 1 (active immediately, no Sysmon config change needed):
+  Matches PowerShell command lines containing Out-Minidump targeting lsass.
+  Out-Minidump is not a native Windows tool — its presence with lsass as the
+  target is an unambiguous credential dumping indicator.
+
+  CONDITION 2 — EID 10 (requires Sysmon config update before it can fire):
+  Matches any process opening lsass.exe with suspicious access rights.
+  The SwiftOnSecurity Sysmon config does NOT capture EID 10 by default.
+  Zero EID 10 events were generated in the entire Week 2 lab — confirmed gap.
+  The Sysmon config on Win10-Victim must be updated before this fires.
+
+  In the Week 2 lab emulation (2026-05-19):
+    EID 1 captured:
+      Image:       powershell.exe
+      CommandLine: powershell.exe -ExecutionPolicy Bypass -C
+                   "get-process lsass | Out-Minidump"
+      ParentImage: powershell.exe
+    EID 10: NOT CAPTURED — Sysmon config gap confirmed
+    Dump file created: %TEMP%\lsass_624.dmp (53MB, lsass PID 624)
+
+  Wazuh result: primary attack undetected. Only cleanup (Remove-Item lsass_*.dmp)
+  triggered rule 92021 at level 3 ("PowerShell deleted files") — completely wrong.
+  This is the highest priority detection gap from Week 2.
+
+  ┌─ DEPLOYMENT NOTE (Day 17 action) ────────────────────────────────────────┐
+  │ Before condition 2 can fire, add this block to the Sysmon config XML     │
+  │ under <RuleGroup name="" groupRelation="or">:                             │
+  │                                                                           │
+  │   <ProcessAccess onmatch="include">                                       │
+  │     <TargetImage condition="end with">lsass.exe</TargetImage>             │
+  │   </ProcessAccess>                                                        │
+  │                                                                           │
+  │ Then reload on Win10-Victim:                                              │
+  │   sysmon64.exe -c sysmon-config.xml                                       │
+  │                                                                           │
+  │ Verify EID 10 is generating before testing the Wazuh rule.               │
+  └───────────────────────────────────────────────────────────────────────────┘
+
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.001/T1003.001.yaml
+  - https://github.com/SwiftOnSecurity/sysmon-config
+
+author: walid (Purple Team Lab — Holberton Cybersecurity)
+date: 2026-05-19
+
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+
+logsource:
+  product: windows
+  # This rule spans two Sysmon event types — EID 1 and EID 10
+  # Sigma tools that require a single category should split into two rules
+  # For this lab, both conditions are kept together for clarity
+
+detection:
+
+  # ── CONDITION 1 — EID 1 ─────────────────────────────────────────────────
+  # Catches the exact attack pattern from Week 2 lab
+  # Works immediately — no Sysmon config change required
+  selection_eid1:
+    EventID: 1
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains|all:
+      - 'lsass'
+      - 'Out-Minidump'
+
+  # ── CONDITION 2 — EID 10 ────────────────────────────────────────────────
+  # Catches any process accessing lsass memory
+  # REQUIRES Sysmon config update — see DEPLOYMENT NOTE above
+  selection_eid10:
+    EventID: 10
+    TargetImage|endswith:
+      - '\lsass.exe'
+
+  # Legitimate processes that access lsass during normal Windows operation
+  filter_system:
+    SourceImage|endswith:
+      - '\Windows\System32\wininit.exe'
+      - '\Windows\System32\svchost.exe'
+      - '\Windows\System32\csrss.exe'
+      - '\Windows\System32\services.exe'
+      - '\Windows\System32\lsm.exe'
+      - '\Windows\System32\taskmgr.exe'
+      - '\Windows\System32\MsMpEng.exe'
+      - '\Windows\System32\wmiprvse.exe'
+
+  condition: selection_eid1 or (selection_eid10 and not filter_system)
+
+falsepositives:
+  - AV and EDR products that legitimately open lsass for monitoring (EID 10)
+  - Windows Defender scanning lsass memory (EID 10)
+  - Task Manager opened by admin to view process details (EID 10)
+  - Legitimate memory analysis tools used by forensics teams
+
+level: critical
+# Wazuh equivalent level: 15
+# Currently: NOTHING fires for this technique (highest priority gap)
+# Day 17 actions:
+#   1. Update Sysmon config to add ProcessAccess rules for lsass.exe
+#   2. Write new Wazuh custom rule targeting EID 1 + Out-Minidump
+#   3. Write new Wazuh custom rule targeting EID 10 + lsass.exe
+#   4. Verify both rules fire before committing
+
+fields:
+  - EventID
+  - Image
+  - CommandLine
+  - TargetImage
+  - SourceImage
+  - GrantedAccess
+  - CallTrace
+  - ParentImage
+  - User
+  - ProcessId

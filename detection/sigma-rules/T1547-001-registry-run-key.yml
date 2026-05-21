@@ -1,0 +1,72 @@
+title: Persistence via Registry Run Key Modification
+id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+status: stable
+
+description: >
+  Detects writes to HKCU or HKLM Run/RunOnce registry keys via reg.exe.
+  These keys execute programs automatically at user logon, making them
+  a common and reliable persistence mechanism for attackers.
+
+  In the Week 2 lab emulation (2026-05-19), Sysmon EID 13 captured:
+    Image:        C:\Windows\system32\reg.exe
+    TargetObject: HKU\S-1-5-21-...\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Atomic Red Team
+    Details:      C:\Path\AtomicRedTeam.exe
+    RuleName:     T1060,RunKey
+
+  IMPORTANT — HKCU appears as HKU\<SID> in Sysmon logs, never as HKCU.
+  The detection uses contains on \CurrentVersion\Run to match regardless
+  of SID, username, or value name — all of which vary per machine.
+
+  Wazuh rule 92302 fires correctly for this technique but at level 6.
+  This Sigma rule sets level: high (Wazuh equivalent: 12).
+  The custom Wazuh rule on Day 17 will raise the level to 12.
+
+references:
+  - https://attack.mitre.org/techniques/T1547/001/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1547.001/T1547.001.yaml
+
+author: walid (Purple Team Lab — Holberton Cybersecurity)
+date: 2026-05-19
+
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1547.001
+
+logsource:
+  product: windows
+  category: registry_set
+  # Sysmon EID 13 — RegistryValueSet
+  # Field path in Wazuh: data.win.eventdata.targetObject
+
+detection:
+  selection:
+    EventID: 13
+    TargetObject|contains:
+      - '\CurrentVersion\Run\'
+      - '\CurrentVersion\RunOnce\'
+  filter_legitimate:
+    Image|endswith:
+      - '\msiexec.exe'
+      - '\MsiExec.exe'
+  condition: selection and not filter_legitimate
+
+falsepositives:
+  - Software installers (MSI packages) writing autostart entries during install
+  - Known legitimate software (OneDrive, Teams, etc.) that persists via Run keys
+  - Group Policy or MDM-managed application deployments
+
+level: high
+# Wazuh equivalent level: 12  (original rule 92302 fires at level 6 — too low)
+# Wazuh rule that currently covers this: 92302
+# Day 17 action: write custom rule to raise level from 6 to 12
+
+fields:
+  - EventID
+  - Image
+  - TargetObject
+  - Details
+  - EventType
+  - RuleName
+  - User
+  - ProcessId

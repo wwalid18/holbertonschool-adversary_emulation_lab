@@ -1,0 +1,76 @@
+title: Local Account Discovery via net.exe
+id: c3d4e5f6-a7b8-9012-cdef-123456789012
+status: stable
+
+description: >
+  Detects use of net.exe or net1.exe to enumerate local user accounts or
+  group memberships via the 'user' or 'localgroup' subcommands.
+  Maps to T1087.001 — Account Discovery: Local Account.
+
+  In the Week 2 lab emulation (2026-05-19), Sysmon EID 1 captured:
+    Image:             C:\Windows\System32\net.exe
+    CommandLine:       net  user
+    ParentImage:       C:\Windows\System32\cmd.exe
+    ParentCommandLine: "cmd.exe" /c net user & dir c:\Users\ & cmdkey.exe /list
+                       & net localgroup "Users" & net localgroup
+    IntegrityLevel:    High
+
+  The parent command line reveals a full recon chain — net user, dir, cmdkey,
+  net localgroup — all chained in one cmd.exe invocation. The child EID 1
+  only shows net user in isolation, which is why context matters.
+
+  NOTE — MITRE mapping gap in existing infrastructure:
+  Wazuh rule 92036 incorrectly maps this event to T1059.003 (Windows Command
+  Shell) and T1574.001 (DLL Search Order Hijacking). Both are wrong.
+  This Sigma rule carries the correct mapping: T1087.001.
+  The custom Wazuh rule on Day 17 will fix the mapping and raise the level.
+
+references:
+  - https://attack.mitre.org/techniques/T1087/001/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1087.001/T1087.001.yaml
+
+author: walid (Purple Team Lab — Holberton Cybersecurity)
+date: 2026-05-19
+
+tags:
+  - attack.discovery
+  - attack.t1087.001
+
+logsource:
+  product: windows
+  category: process_creation
+  # Sysmon EID 1 — Process Create
+  # Field path in Wazuh: data.win.eventdata.commandLine
+  # Field path in Wazuh: data.win.eventdata.image
+
+detection:
+  selection_image:
+    EventID: 1
+    Image|endswith:
+      - '\net.exe'
+      - '\net1.exe'
+  selection_args:
+    CommandLine|contains:
+      - ' user'
+      - ' localgroup'
+  condition: selection_image and selection_args
+
+falsepositives:
+  - IT administrators running net user for legitimate account auditing
+  - Helpdesk scripts checking group memberships
+  - Monitoring or inventory agents enumerating local accounts
+
+level: medium
+# Wazuh equivalent level: 8
+# Wazuh rule that currently covers this: 92036 (wrong MITRE mapping)
+# Day 17 action: write custom rule with correct T1087.001 mapping, level 8
+
+fields:
+  - EventID
+  - Image
+  - CommandLine
+  - ParentImage
+  - ParentCommandLine
+  - User
+  - IntegrityLevel
+  - ProcessId

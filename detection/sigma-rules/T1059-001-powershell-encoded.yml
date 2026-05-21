@@ -1,0 +1,68 @@
+title: PowerShell Encoded Command Execution
+id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+status: stable
+
+description: >
+  Detects execution of PowerShell with a Base64-encoded command via the
+  -EncodedCommand flag (and its abbreviations: -e, -en, -enc).
+  Attackers use encoding to obfuscate malicious payloads from basic log inspection.
+
+  In the Week 2 lab emulation (2026-05-19), Sysmon EID 1 captured cmd.exe
+  as the image — not powershell.exe directly — because the attack chain was:
+    powershell.exe (parent)
+      └── cmd.exe /c powershell.exe -e <base64blob>
+  The detection therefore matches on commandLine content, not on image name,
+  so it catches both direct and cmd-proxied invocations.
+
+  Wazuh rule 92057 (level 12) already fires correctly for this technique.
+  This Sigma rule documents the detection logic for portability and peer review.
+
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1059.001/T1059.001.yaml
+
+author: walid (Purple Team Lab — Holberton Cybersecurity)
+date: 2026-05-19
+
+tags:
+  - attack.execution
+  - attack.t1059.001
+
+logsource:
+  product: windows
+  category: process_creation
+  # Sysmon EID 1 — Process Create
+  # Field path in Wazuh: data.win.eventdata.commandLine
+
+detection:
+  selection:
+    EventID: 1
+    CommandLine|contains:
+      - 'powershell.exe -e '
+      - 'powershell.exe -en '
+      - 'powershell.exe -enc '
+      - 'powershell.exe -EncodedCommand '
+      - 'powershell.exe -encodedcommand '
+      - 'pwsh.exe -e '
+      - 'pwsh.exe -enc '
+      - 'pwsh.exe -EncodedCommand '
+  condition: selection
+
+falsepositives:
+  - Legitimate admin scripts that use encoded commands for special characters
+  - Software deployment tools (SCCM, Intune) that encode payloads
+  - IT automation pipelines using encoded PowerShell
+
+level: high
+# Wazuh equivalent level: 12
+# Wazuh rule that already covers this: 92057
+
+fields:
+  - EventID
+  - Image
+  - CommandLine
+  - ParentImage
+  - ParentCommandLine
+  - User
+  - IntegrityLevel
+  - ProcessId
