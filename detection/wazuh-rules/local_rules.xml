@@ -1,0 +1,162 @@
+<!-- ============================================================
+     Purple Team Lab — Week 3 Custom Detection Rules
+     File: /var/ossec/etc/rules/local_rules.xml
+     Author: walid (Holberton Cybersecurity — Adversary Emulation Lab)
+     Date: 2026-05-19
+     
+     Rule ID assignments:
+       100002 — T1059.001 PowerShell encoded command (documents 92057)
+       100003 — T1547.001 Registry Run key (raises level from 6 to 12)
+       100004 — T1087.001 Account discovery (fixes MITRE mapping)
+       100005 — T1003.001 LSASS dump via Out-Minidump (EID 1, new)
+       100006 — T1003.001 LSASS process access (EID 10, new)
+     
+     Note: ID 100001 is already used by the default SSH example rule.
+     ============================================================ -->
+
+<!-- Default example rule — DO NOT REMOVE -->
+<group name="local,syslog,sshd,">
+  <rule id="100001" level="5">
+    <if_sid>5716</if_sid>
+    <srcip>1.1.1.1</srcip>
+    <description>sshd: authentication failed from IP 1.1.1.1.</description>
+    <group>authentication_failed,pci_dss_10.2.4,pci_dss_10.2.5,</group>
+  </rule>
+</group>
+
+<!-- ============================================================
+     Week 3 Purple Team Detection Rules
+     ============================================================ -->
+
+<group name="sysmon,windows,purple_team,">
+
+  <!-- ===========================================================
+       RULE 100002 — T1059.001 PowerShell Encoded Command
+       
+       Documents the detection already provided by rule 92057.
+       Wazuh rule 92057 fires correctly at level 12 for this technique.
+       This rule adds explicit lab documentation and a second trigger
+       path that catches direct powershell.exe invocations with -enc.
+       
+       Based on real log (2026-05-19):
+         Image:       cmd.exe
+         CommandLine: "cmd.exe" /c powershell.exe -e <base64blob>
+         EID:         1
+       =========================================================== -->
+  <rule id="100002" level="12">
+    <if_group>sysmon_eid1_detections</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)powershell\.exe\s+-e(n(c(odedcommand)?)?)?\s+</field>
+    <description>T1059.001 - PowerShell base64 encoded command execution detected</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>attack,execution,</group>
+  </rule>
+
+  <!-- ===========================================================
+       RULE 100003 — T1547.001 Registry Run Key Persistence
+       
+       Overrides rule 92302 which fires at level 6 (too low).
+       Raises severity to level 12 for Run/RunOnce key modifications.
+       
+       Based on real log (2026-05-19):
+         Image:        C:\Windows\system32\reg.exe
+         TargetObject: HKU\S-1-5-21-...\CurrentVersion\Run\Atomic Red Team
+         EventType:    SetValue
+         EID:          13
+       
+       NOTE: HKCU appears as HKU\<SID> in Sysmon logs.
+             Match on \CurrentVersion\Run to catch all variants
+             regardless of SID or value name.
+       =========================================================== -->
+  <rule id="100003" level="12">
+    <if_sid>92302</if_sid>
+    <description>T1547.001 - Registry Run key persistence detected (level raised from 6)</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>attack,persistence,</group>
+  </rule>
+
+  <!-- ===========================================================
+       RULE 100004 — T1087.001 Local Account Discovery
+       
+       Fixes incorrect MITRE mapping in rule 92036.
+       Rule 92036 maps this to T1059.003 + T1574.001 — both wrong.
+       Correct mapping is T1087.001 Account Discovery: Local Account.
+       Also raises level from 3 to 8.
+       
+       Based on real log (2026-05-19):
+         Image:             C:\Windows\System32\net.exe
+         CommandLine:       net  user
+         ParentCommandLine: cmd.exe /c net user & net localgroup ...
+         EID:               1
+       =========================================================== -->
+  <rule id="100004" level="8">
+    <if_sid>92036</if_sid>
+    <description>T1087.001 - Local account discovery via net.exe (corrected MITRE mapping)</description>
+    <mitre>
+      <id>T1087.001</id>
+    </mitre>
+    <group>attack,discovery,</group>
+  </rule>
+
+  <!-- ===========================================================
+       RULE 100005 — T1003.001 LSASS Credential Dump (EID 1)
+       
+       NEW RULE — nothing existed for this technique before.
+       Detects PowerShell Out-Minidump targeting lsass via EID 1.
+       Works immediately without any Sysmon config changes.
+       
+       Based on real log (2026-05-19):
+         Image:       powershell.exe
+         CommandLine: powershell.exe -ExecutionPolicy Bypass -C
+                      "get-process lsass | Out-Minidump"
+         EID:         1
+         Result:      lsass_624.dmp (53MB) written to %TEMP%
+       
+       Out-Minidump is not a native Windows tool. Any use of it
+       against lsass is an unambiguous credential dumping attempt.
+       =========================================================== -->
+  <rule id="100005" level="15">
+    <if_group>sysmon</if_group>
+    <field name="win.system.eventID">^11$</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)lsass.*\.dmp$</field>
+    <description>T1003.001 - LSASS dump file created (Out-Minidump credential dumping detected)</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>attack,credential_access,</group>
+  </rule>
+
+  <!-- ===========================================================
+       RULE 100006 — T1003.001 LSASS Process Access (EID 10)
+       
+       NEW RULE — requires Sysmon config update before it can fire.
+       Detects any process opening lsass.exe via EID 10 ProcessAccess.
+       
+       PREREQUISITE: The ProcessAccess block in sysmonconfig.xml must
+       include a TargetImage rule for lsass.exe. The default
+       SwiftOnSecurity config has an empty include block — zero EID 10
+       events are generated until this is fixed.
+       
+       Fix applied Day 17:
+         Added <TargetImage condition="end with">lsass.exe</TargetImage>
+         inside the <ProcessAccess onmatch="include"> block.
+         Reloaded with: Sysmon64.exe -c C:\Sysmon\sysmonconfig.xml
+       
+       Field note: EID 10 uses win.eventdata.targetImage (not image).
+       =========================================================== -->
+  <rule id="100006" level="15">
+    <if_group>sysmon</if_group>
+    <field name="win.system.eventID">^10$</field>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)lsass\.exe$</field>
+    <field name="win.eventdata.sourceImage" type="pcre2" negate="yes">(?i)(VBoxService\.exe|MsMpEng\.exe|WinDefend\.exe|svchost\.exe|wininit\.exe|csrss\.exe|services\.exe|lsm\.exe|wmiprvse\.exe|wazuh-agent\.exe|MicrosoftEdgeUpdate\.exe)</field>
+    <description>T1003.001 - Process accessed lsass.exe memory (possible credential dumping)</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>attack,credential_access,</group>
+  </rule>
+
+</group>

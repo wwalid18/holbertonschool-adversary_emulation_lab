@@ -199,3 +199,54 @@ Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
 - **Result:** Rule now catches taskmgr.exe opening lsass.exe via EID 10
 
 ### All 4 rules finalized
+
+## Day 17 — 2026-05-22
+
+### Issue: ossec-logtest not found
+- **Error:** `sudo: /var/ossec/bin/ossec-logtest: command not found`
+- **Cause:** Wazuh 4.x replaced ossec-logtest with wazuh-analysisd
+- **Fix:** `sudo /var/ossec/bin/wazuh-analysisd -t 2>&1 | grep -i error`
+- **Result:** Validation working, no errors on custom rules
+
+### Issue: Sysmon config path incorrect
+- **Error:** `Cannot find path 'C:\Sysmon\sysmon-config.xml'`
+- **Cause:** File is named `sysmonconfig.xml` not `sysmon-config.xml`
+- **Fix:** Located correct path via `Get-ChildItem -Path C:\ -Recurse -Filter "*.xml" | Where-Object { $_.Name -match "sysmon" }`
+- **Result:** Correct path confirmed as `C:\Sysmon\sysmonconfig.xml`
+
+### Issue: EID 10 not generating — Sysmon ProcessAccess block empty
+- **Error:** Zero EID 10 events in Sysmon log
+- **Cause:** SwiftOnSecurity config has `<ProcessAccess onmatch="include">` with no rules inside — the comment inside confirms nothing is logged when include has no entries
+- **Fix:** Added `<TargetImage condition="end with">lsass.exe</TargetImage>` inside the ProcessAccess block, reloaded with `C:\Windows\Sysmon64.exe -c C:\Sysmon\sysmonconfig.xml`
+- **Result:** EID 10 generating immediately after reload confirmed
+
+### Issue: VBoxService.exe generating false positive EID 10 alerts on rule 100006
+- **Finding:** VBoxService.exe accesses lsass every ~15 seconds with GrantedAccess 0x1400
+- **Cause:** Normal VirtualBox guest service behavior — was not in the original negate filter
+- **Fix:** Added `VBoxService\.exe` to the negate filter in rule 100006
+- **Result:** VBoxService alerts suppressed
+
+### Issue: wazuh-agent.exe and MicrosoftEdgeUpdate.exe generating false positive EID 10 alerts
+- **Finding:** wazuh-agent.exe opened lsass with GrantedAccess 0x1FFFFF, MicrosoftEdgeUpdate.exe with 0x1000
+- **Cause:** Wazuh agent legitimately reads lsass for monitoring; Edge updater checks session info during update
+- **Fix:** Added `wazuh-agent\.exe` and `MicrosoftEdgeUpdate\.exe` to the negate filter in rule 100006
+- **Result:** False positives suppressed, powershell.exe opening lsass still fires correctly at level 15
+
+### Issue: Rule 100005 never firing — wrong detection approach for Out-Minidump
+- **Error:** No alerts for rule 100005 after running Out-Minidump
+- **Cause:** Out-Minidump is a PowerShell function loaded via dot-sourcing — it never appears in a process creation command line because no new process is spawned. The function executes inside the existing PowerShell process. EID 1 CommandLine approach was fundamentally wrong
+- **Fix:** Changed rule 100005 from EID 1 CommandLine match on `out-minidump` to EID 11 FileCreate match on `lsass.*\.dmp` in targetFilename
+- **Result:** Rule 100005 fired at level 15 on `lsass_600.dmp` creation confirmed
+
+### Issue: Rule 100005 still not firing after EID 11 fix — wrong group
+- **Error:** Rule 100005 still not triggering even after switching to EID 11
+- **Cause:** Rule used `if_group sysmon_eid11_detections` which only activates when an existing base rule already matched the EID 11 event. No base Wazuh rule matches `.dmp` files so the group was never entered and rule 100005 was never evaluated
+- **Fix:** Changed `if_group` from `sysmon_eid11_detections` to `sysmon` and added explicit `<field name="win.system.eventID">^11$</field>` to the rule
+- **Result:** Rule fires correctly on any lsass dump file creation
+
+### All 5 rules verified firing
+- Rule 100002 — T1059.001 — level 12 — EID 1 — fired x2
+- Rule 100003 — T1547.001 — level 12 — EID 13 — fired x1
+- Rule 100004 — T1087.001 — level 8 — EID 1 — fired x3
+- Rule 100005 — T1003.001 — level 15 — EID 11 — fired x1
+- Rule 100006 — T1003.001 — level 15 — EID 10 — fired confirmed
