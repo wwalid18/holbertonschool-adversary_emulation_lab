@@ -250,3 +250,28 @@ Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
 - Rule 100004 — T1087.001 — level 8 — EID 1 — fired x3
 - Rule 100005 — T1003.001 — level 15 — EID 11 — fired x1
 - Rule 100006 — T1003.001 — level 15 — EID 10 — fired confirmed
+
+## Day 18 — 2026-05-22
+
+### Rule tuning — false positive analysis across all 5 rules
+
+- Rule 100002 (T1059.001): no false positives observed at rest
+- Rule 100003 (T1547.001): no false positives observed at rest
+- Rule 100004 (T1087.001): net user and net localgroup fire on legitimate admin use — acceptable at level 8, requires analyst triage
+- Rule 100005 (T1003.001): no false positives observed — no process writes lsass*.dmp during normal operation
+- Rule 100006 (T1003.001): three false positive sources identified from Day 17 testing
+
+### Issue: Rule 100006 negate filter not suppressing wazuh-agent.exe and MicrosoftEdgeUpdate.exe
+- **Finding:** wazuh-agent.exe (3 alerts) and MicrosoftEdgeUpdate.exe (2 alerts) still appearing in rule 100006 alerts after initial filter deployment
+- **Cause:** Original negate regex used escaped backslashes and full path patterns — parentheses in `Program Files (x86)` are regex special characters and caused the entire pattern to fail silently
+- **Fix:** Simplified negate regex to match on process name only without path — `(?i)(VBoxService|MsMpEng|WinDefend|svchost|wininit|csrss|services|lsm|wmiprvse|wazuh-agent|ossec-agent|MicrosoftEdgeUpdate|EdgeUpdate)`
+- **Result:** All timestamps for false positive sources confirmed before fix deployment — no new false positive alerts after 11:42
+
+### Final false positive disposition
+- VBoxService.exe — suppressed via negate filter
+- wazuh-agent.exe / ossec-agent — suppressed via negate filter
+- MicrosoftEdgeUpdate.exe — suppressed via negate filter
+- powershell.exe opening lsass — intentional alert, investigate every instance
+- net user / net localgroup — intentional alert at level 8, expected admin noise
+
+### All 5 rules tuned and finalized
