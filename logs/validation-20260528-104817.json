@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "script": "run_emulation.py",
+    "run_timestamp": "2026-05-28T10:48:17.825308+00:00",
+    "window_minutes": 10080,
+    "indexer_url": "https://127.0.0.1:9200",
+    "index_pattern": "wazuh-alerts-4.x-*"
+  },
+  "summary": {
+    "techniques_tested": 4,
+    "techniques_detected": 4,
+    "detection_rate": "4/4",
+    "all_passing": true
+  },
+  "results": [
+    {
+      "technique_id": "T1059.001",
+      "technique_name": "PowerShell Encoded Command Execution",
+      "tactic": "Execution",
+      "test_tool": "Atomic Red Team Test #17",
+      "detected": true,
+      "firing_rule_id": "100002",
+      "alert_count": 2,
+      "latest_alert": "2026-05-21T12:15:00.432+0100",
+      "confidence": 5,
+      "noise": 1,
+      "errors": [],
+      "window_minutes": 10080
+    },
+    {
+      "technique_id": "T1547.001",
+      "technique_name": "Registry Run Key Persistence",
+      "tactic": "Persistence",
+      "test_tool": "Atomic Red Team Test #1",
+      "detected": true,
+      "firing_rule_id": "100003",
+      "alert_count": 1,
+      "latest_alert": "2026-05-21T12:16:05.073+0100",
+      "confidence": 5,
+      "noise": 2,
+      "errors": [],
+      "window_minutes": 10080
+    },
+    {
+      "technique_id": "T1087.001",
+      "technique_name": "Local Account Discovery via net.exe",
+      "tactic": "Discovery",
+      "test_tool": "Atomic Red Team Test #8",
+      "detected": true,
+      "firing_rule_id": "100004",
+      "alert_count": 3,
+      "latest_alert": "2026-05-21T12:17:03.697+0100",
+      "confidence": 5,
+      "noise": 3,
+      "errors": [],
+      "window_minutes": 10080
+    },
+    {
+      "technique_id": "T1003.001",
+      "technique_name": "LSASS Memory Credential Dumping",
+      "tactic": "Credential Access",
+      "test_tool": "MITRE Caldera / Out-Minidump.ps1",
+      "detected": true,
+      "firing_rule_id": "100005",
+      "alert_count": 1,
+      "latest_alert": "2026-05-22T11:42:25.120+0100",
+      "confidence": 5,
+      "noise": 2,
+      "errors": [],
+      "window_minutes": 10080
+    }
+  ]
+}

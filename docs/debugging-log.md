@@ -286,3 +286,25 @@ Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
 - T1003.001: confidence 5/5, noise 2/5 — dual coverage via EID 10 and EID 11, three FP sources suppressed
 - JSON validated locally with python3 before commit — all 4 techniques parsed correctly
 - Overall: 4/4 detection rate, average confidence 5.0, average noise 2.0
+
+## Day 20 — 2026-05-28
+
+### Issue: Wazuh API /alerts endpoint not found
+- **Error:** `{"title": "Not Found", "detail": "404: Not Found"}`
+- **Cause:** Wazuh 4.x does not expose alerts via the manager API at port 55000 — alerts live in the OpenSearch indexer at port 9200
+- **Fix:** Switched to querying `https://127.0.0.1:9200/wazuh-alerts-4.x-*/_search` directly using OpenSearch DSL
+- **Result:** Indexer query returns correct alerts with rule.id filtering
+
+### Issue: Wazuh API password unknown
+- **Cause:** Default wazuh user password was changed during initial setup and not documented
+- **Fix:** Generated new password hash via werkzeug, updated directly in `/var/ossec/api/configuration/security/rbac.db` using sqlite3, restarted wazuh-manager
+- **Credentials set:** wazuh / WazuhLab123!
+- **Result:** API token obtained successfully from https://127.0.0.1:55000
+
+### run_emulation.py completed and tested
+- Script queries Wazuh indexer for each of the 4 techniques using rule ID + time window filter
+- Prints PASS/FAIL per technique with alert count, latest timestamp, confidence and noise scores
+- Saves structured JSON validation report to logs/validation-<timestamp>.json
+- Tested with --window 10080 (7 days) — all 4 techniques PASS
+- Validation report confirmed valid JSON with correct structure
+- Exit code 0 on all pass, exit code 1 on any gap — usable in CI pipelines
