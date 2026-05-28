@@ -1,0 +1,215 @@
+{
+  "metadata": {
+    "lab": "Holberton Cybersecurity — Purple Team Adversary Emulation Lab",
+    "week": 3,
+    "assessment_date": "2026-05-22",
+    "assessor": "walid",
+    "scoring_system": {
+      "confidence": "1 (missed every run) to 5 (caught every run)",
+      "noise": "1 (silent, zero false positives) to 5 (constant false positives)"
+    },
+    "environment": {
+      "attacker": "Kali Linux 192.168.56.1",
+      "victim": "Windows 10 192.168.56.101 (Win10-Victim)",
+      "siem": "Wazuh 4.7.5",
+      "sysmon": "v15.20 SwiftOnSecurity config schema 4.50 (modified Day 17)",
+      "emulation_framework": "Atomic Red Team v2.1.0 + MITRE Caldera 5.2.0"
+    }
+  },
+  "techniques": [
+    {
+      "technique_id": "T1059.001",
+      "technique_name": "Command and Scripting Interpreter: PowerShell",
+      "tactic": "Execution",
+      "test_tool": "Atomic Red Team",
+      "test_number": 17,
+      "test_command": "cmd.exe /c powershell.exe -e <base64blob>",
+      "detection": {
+        "detected": true,
+        "rules_fired": [
+          {
+            "rule_id": "92057",
+            "description": "Powershell.exe spawned a powershell process which executed a base64 encoded command",
+            "level": 12,
+            "type": "existing",
+            "times_fired": 1
+          },
+          {
+            "rule_id": "100002",
+            "description": "T1059.001 - PowerShell base64 encoded command execution detected",
+            "level": 12,
+            "type": "custom",
+            "times_fired": 2
+          }
+        ],
+        "sysmon_eid": 1,
+        "detection_field": "win.eventdata.commandLine",
+        "detection_signal": "powershell.exe -e/-enc/-EncodedCommand flag in command line"
+      },
+      "scores": {
+        "confidence": 5,
+        "confidence_rationale": "Fired on every test run, caught both the cmd-proxied and direct invocation paths",
+        "noise": 1,
+        "noise_rationale": "Zero false positives observed — encoded PowerShell is rare in normal VM operation"
+      },
+      "gaps": [
+        "Alternate encoding flags not in regex (e.g. -ec) would evade",
+        "pwsh.exe on newer systems covered by separate regex entry"
+      ]
+    },
+    {
+      "technique_id": "T1547.001",
+      "technique_name": "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder",
+      "tactic": "Persistence",
+      "test_tool": "Atomic Red Team",
+      "test_number": 1,
+      "test_command": "reg.exe ADD HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run /v AtomicRedTeam /t REG_SZ /d C:\\Path\\AtomicRedTeam.exe",
+      "detection": {
+        "detected": true,
+        "rules_fired": [
+          {
+            "rule_id": "92302",
+            "description": "Registry entry to be executed on next logon was modified using reg.exe",
+            "level": 6,
+            "type": "existing",
+            "times_fired": 1,
+            "note": "Level too low — raised by custom rule 100003"
+          },
+          {
+            "rule_id": "100003",
+            "description": "T1547.001 - Registry Run key persistence detected (level raised from 6)",
+            "level": 12,
+            "type": "custom",
+            "times_fired": 1
+          }
+        ],
+        "sysmon_eid": 13,
+        "detection_field": "win.eventdata.targetObject",
+        "detection_signal": "TargetObject contains \\CurrentVersion\\Run\\ written by reg.exe"
+      },
+      "scores": {
+        "confidence": 5,
+        "confidence_rationale": "Fired on every test run — EID 13 is reliably generated for any reg.exe Run key write",
+        "noise": 2,
+        "noise_rationale": "Software installers occasionally write Run keys during install — msiexec filtered out but other installers may trigger"
+      },
+      "gaps": [
+        "PowerShell Set-ItemProperty writing Run keys bypasses rule 92302 but still hits 100003 via EID 13",
+        "HKLM Run key modifications covered by same contains pattern"
+      ]
+    },
+    {
+      "technique_id": "T1087.001",
+      "technique_name": "Account Discovery: Local Account",
+      "tactic": "Discovery",
+      "test_tool": "Atomic Red Team",
+      "test_number": 8,
+      "test_command": "cmd.exe /c net user & net localgroup Users & net localgroup",
+      "detection": {
+        "detected": true,
+        "rules_fired": [
+          {
+            "rule_id": "92036",
+            "description": "A net.exe binary was started by a Windows cmd shell",
+            "level": 3,
+            "type": "existing",
+            "times_fired": 1,
+            "note": "Wrong MITRE mapping — T1059.003 and T1574.001 instead of T1087.001. Fixed by custom rule 100004"
+          },
+          {
+            "rule_id": "100004",
+            "description": "T1087.001 - Local account discovery via net.exe (corrected MITRE mapping)",
+            "level": 8,
+            "type": "custom",
+            "times_fired": 3
+          }
+        ],
+        "sysmon_eid": 1,
+        "detection_field": "win.eventdata.commandLine",
+        "detection_signal": "net.exe or net1.exe with user or localgroup subcommand"
+      },
+      "scores": {
+        "confidence": 5,
+        "confidence_rationale": "Fired on every test run — all three net.exe invocations caught separately",
+        "noise": 3,
+        "noise_rationale": "net user and net localgroup are common legitimate admin commands — medium false positive risk in production environments, acceptable in this lab"
+      },
+      "gaps": [
+        "PowerShell Get-LocalUser and Get-LocalGroupMember not covered",
+        "WMI-based account enumeration not covered",
+        "LDAP queries for domain account discovery not covered"
+      ]
+    },
+    {
+      "technique_id": "T1003.001",
+      "technique_name": "OS Credential Dumping: LSASS Memory",
+      "tactic": "Credential Access",
+      "test_tool": "MITRE Caldera + manual PowerShell fallback",
+      "test_number": null,
+      "test_command": ". $env:TEMP\\Out-Minidump.ps1; Get-Process lsass | Out-Minidump -DumpFilePath $env:TEMP",
+      "detection": {
+        "detected": true,
+        "week2_status": "UNDETECTED — zero EID 10 events, no rules existed",
+        "week3_fix": "Added ProcessAccess rule to Sysmon config for lsass.exe, wrote rules 100005 and 100006",
+        "rules_fired": [
+          {
+            "rule_id": "100005",
+            "description": "T1003.001 - LSASS dump file created (Out-Minidump credential dumping detected)",
+            "level": 15,
+            "type": "custom",
+            "times_fired": 1,
+            "sysmon_eid": 11,
+            "detection_field": "win.eventdata.targetFilename",
+            "detection_signal": "lsass*.dmp file created by powershell.exe"
+          },
+          {
+            "rule_id": "100006",
+            "description": "T1003.001 - Process accessed lsass.exe memory (possible credential dumping)",
+            "level": 15,
+            "type": "custom",
+            "times_fired": 1,
+            "sysmon_eid": 10,
+            "detection_field": "win.eventdata.targetImage",
+            "detection_signal": "powershell.exe opened lsass.exe with GrantedAccess 0x1F3FFF and 0x1FFFFF"
+          }
+        ]
+      },
+      "scores": {
+        "confidence": 5,
+        "confidence_rationale": "Two complementary rules provide dual coverage — EID 11 catches the dump file artifact, EID 10 catches the memory access event. Both fired on test run",
+        "noise": 2,
+        "noise_rationale": "Three false positive sources identified and suppressed via negate filter (VBoxService, wazuh-agent, MicrosoftEdgeUpdate). Task Manager alerts intentionally kept"
+      },
+      "gaps": [
+        "Mimikatz sekurlsa::logonpasswords — EID 10 would catch it via different GrantedAccess value",
+        "Direct syscall credential dumping tools may bypass Sysmon EID 10 entirely",
+        "Procdump.exe dumping lsass — EID 11 would catch the .dmp file"
+      ],
+      "false_positives_suppressed": [
+        "VBoxService.exe — VirtualBox guest service accesses lsass every 15 seconds",
+        "wazuh-agent.exe (ossec-agent) — Wazuh agent monitoring",
+        "MicrosoftEdgeUpdate.exe — Edge updater session check"
+      ]
+    }
+  ],
+  "summary": {
+    "techniques_tested": 4,
+    "techniques_detected": 4,
+    "detection_rate": "4/4",
+    "rules_deployed": 5,
+    "rules_existing_improved": 2,
+    "rules_new": 3,
+    "average_confidence": 5.0,
+    "average_noise": 2.0,
+    "critical_gaps_closed": [
+      "T1003.001 — completely undetected in Week 2, now covered by 2 rules at level 15",
+      "T1087.001 — wrong MITRE mapping corrected from T1059.003 to T1087.001",
+      "T1547.001 — severity level raised from 6 to 12"
+    ],
+    "remaining_gaps": [
+      "PowerShell-based account enumeration evades T1087.001 rule",
+      "Direct syscall credential dumping tools evade Sysmon EID 10",
+      "WMI-based discovery techniques not covered"
+    ]
+  }
+}

@@ -275,3 +275,14 @@ Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
 - net user / net localgroup — intentional alert at level 8, expected admin noise
 
 ### All 5 rules tuned and finalized
+
+## Day 19 — 2026-05-22
+
+- Detection scores documented for all 4 techniques using Confidence/Noise 1-5 scale per planning doc
+- Scoring aligned with dashboard and AAR requirements — percentages from initial draft replaced with 1-5 scale
+- T1059.001: confidence 5/5, noise 1/5 — double coverage, zero false positives
+- T1547.001: confidence 5/5, noise 2/5 — solid EID 13 coverage, msiexec filtered
+- T1087.001: confidence 5/5, noise 3/5 — correct MITRE mapping applied, medium noise from legitimate net.exe use
+- T1003.001: confidence 5/5, noise 2/5 — dual coverage via EID 10 and EID 11, three FP sources suppressed
+- JSON validated locally with python3 before commit — all 4 techniques parsed correctly
+- Overall: 4/4 detection rate, average confidence 5.0, average noise 2.0
