@@ -308,3 +308,18 @@ Expand-Archive "$env:TEMP\powershell-yaml.zip" -DestinationPath `
 - Tested with --window 10080 (7 days) — all 4 techniques PASS
 - Validation report confirmed valid JSON with correct structure
 - Exit code 0 on all pass, exit code 1 on any gap — usable in CI pipelines
+
+## Day 21 — 2026-06-01
+
+- Dashboard rebuilt as two-page live application served via Flask proxy
+- Testing page: technique cards with RUN buttons, attack command preview,
+  live WinRM stdout panel, confidence/noise bars, danger badge from Wazuh level,
+  key field from latest alert (commandLine/targetObject/processAccess/targetFilename)
+- Alerts Log page: pulls real Wazuh alerts from live-alerts.json written by server,
+  table shows time/technique/rule/level/danger/EID/key field/agent — all real data
+- Notifications: popup bottom-right when new alert fires, color coded by danger level,
+  auto-dismiss after 8 seconds
+- Live log file created on server start, deleted on shutdown — session-scoped
+- Noise protection: only rule IDs 100002-100006 ever queried — no other Wazuh rules
+- Duplicate alert prevention: deduplication by Wazuh alert _id
+- Week 3 all deliverables complete

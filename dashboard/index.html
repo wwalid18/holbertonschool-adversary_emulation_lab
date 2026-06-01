@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purple Team — Adversary Emulation Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #f8f9fa;
+  --sidebar:  #1a1d23;
+  --white:    #ffffff;
+  --border:   #e2e6ea;
+  --text:     #212529;
+  --text-2:   #6c757d;
+  --text-3:   #adb5bd;
+  --blue:     #2563eb;
+  --blue-bg:  #eff6ff;
+  --green:    #16a34a;
+  --green-bg: #f0fdf4;
+  --red:      #dc2626;
+  --red-bg:   #fef2f2;
+  --orange:   #ea580c;
+  --orange-bg:#fff7ed;
+  --yellow:   #ca8a04;
+  --yellow-bg:#fefce8;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 200px; min-width: 200px; background: var(--sidebar);
+  display: flex; flex-direction: column; padding: 0;
+}
+.sidebar-logo {
+  padding: 20px 16px 16px; border-bottom: 1px solid #2d3139;
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-box {
+  width: 28px; height: 28px; background: var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: white; flex-shrink: 0;
+}
+.logo-text { font-size: 12px; font-weight: 600; color: #e9ecef; line-height: 1.3; }
+.logo-sub  { font-size: 10px; color: #6c757d; }
+
+.sidebar-nav { flex: 1; padding: 12px 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; cursor: pointer; color: #adb5bd;
+  font-size: 12px; font-weight: 500; position: relative;
+  transition: all 0.15s; border-left: 3px solid transparent;
+}
+.nav-item:hover   { color: #e9ecef; background: #2d3139; }
+.nav-item.active  { color: #ffffff; background: #2d3139; border-left-color: var(--blue); }
+.nav-item .nav-badge {
+  position: absolute; right: 12px; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--red); display: none;
+}
+.nav-item .nav-badge.show { display: block; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+.nav-icon { font-size: 14px; width: 16px; text-align: center; }
+
+.sidebar-footer {
+  padding: 12px 16px; border-top: 1px solid #2d3139;
+  font-size: 10px; color: #495057;
+}
+.conn-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.conn-dot { width: 6px; height: 6px; border-radius: 50%; background: #495057; flex-shrink: 0; transition: background 0.3s; }
+.conn-dot.ok  { background: #16a34a; }
+.conn-dot.err { background: var(--red); }
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Topbar ── */
+.topbar {
+  background: var(--white); border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 52px; display: flex;
+  align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.window-select {
+  border: 1px solid var(--border); background: var(--white);
+  color: var(--text-2); font-family: var(--mono); font-size: 11px;
+  padding: 4px 8px; cursor: pointer; outline: none; border-radius: 4px;
+}
+
+.last-update { font-size: 11px; color: var(--text-3); font-family: var(--mono); }
+
+/* ── Pages ── */
+.page { display: none; flex: 1; overflow-y: auto; padding: 24px; }
+.page.active { display: block; }
+
+/* ── Summary bar ── */
+.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.summary-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 6px; padding: 16px 20px;
+}
+.summary-card .s-val  { font-size: 28px; font-weight: 700; color: var(--text); font-family: var(--mono); line-height: 1; margin-bottom: 4px; }
+.summary-card .s-label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.summary-card.accent .s-val { color: var(--blue); }
+
+/* ── Section header ── */
+.section-hdr {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+
+/* ── Two col layout ── */
+.two-col { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+
+/* ── Technique cards ── */
+.cards-stack { display: flex; flex-direction: column; gap: 8px; }
+
+.tcard {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+}
+.tcard-header {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+.tcard-stripe { width: 4px; background: var(--border); flex-shrink: 0; transition: background 0.3s; }
+.tcard.detected .tcard-stripe { background: var(--green); }
+.tcard.missed   .tcard-stripe { background: var(--red); }
+
+.tcard-top { flex: 1; padding: 12px 16px; display: flex; align-items: flex-start; justify-content: space-between; }
+.tcard-id   { font-family: var(--mono); font-size: 10px; color: var(--blue); margin-bottom: 2px; }
+.tcard-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.tcard-tactic { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+
+.tcard-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 10px;
+  font-weight: 600; letter-spacing: 0.05em;
+}
+.badge .bdot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.badge.detected { background: var(--green-bg); color: var(--green); }
+.badge.missed   { background: var(--red-bg);   color: var(--red); }
+.badge.running  { background: var(--yellow-bg); color: var(--yellow); }
+.badge.idle     { background: var(--bg); color: var(--text-3); }
+
+.badge.danger-CRITICAL { background: var(--red-bg);    color: var(--red); }
+.badge.danger-HIGH     { background: var(--orange-bg);  color: var(--orange); }
+.badge.danger-MEDIUM   { background: var(--yellow-bg);  color: var(--yellow); }
+.badge.danger-LOW      { background: var(--green-bg);   color: var(--green); }
+.badge.danger-INFO     { background: var(--bg);          color: var(--text-3); }
+
+.run-btn {
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--white); color: var(--text-2); font-size: 11px;
+  font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: var(--mono);
+}
+.run-btn:hover:not(:disabled)  { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+.run-btn.running { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-bg); }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Card body */
+.tcard-body { padding: 10px 16px 12px; }
+.tcard-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 10px; }
+.meta-lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+.meta-val { font-family: var(--mono); font-size: 11px; color: var(--text); }
+.meta-val.rule { color: var(--blue); }
+
+.score-row { display: flex; align-items: center; gap: 6px; }
+.score-track { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.score-fill  { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.8s; }
+.score-fill.noise { background: var(--yellow); }
+.score-n { font-family: var(--mono); font-size: 10px; color: var(--text-3); width: 22px; text-align: right; }
+
+.key-field {
+  font-family: var(--mono); font-size: 10px; color: var(--text-2);
+  background: var(--bg); padding: 6px 8px; border-radius: 3px;
+  border: 1px solid var(--border); word-break: break-all;
+  margin-top: 6px; min-height: 26px;
+}
+.key-field .kf-label { color: var(--text-3); margin-right: 6px; }
+
+/* Attack output panel */
+.attack-output {
+  background: #1a1d23; border-radius: 4px; padding: 10px 12px;
+  font-family: var(--mono); font-size: 10px; color: #adb5bd;
+  max-height: 120px; overflow-y: auto; margin-top: 8px;
+  display: none; white-space: pre-wrap; word-break: break-all;
+  line-height: 1.6;
+}
+.attack-output.show { display: block; }
+.attack-output .ao-stdout { color: #adb5bd; }
+.attack-output .ao-stderr { color: #ef4444; }
+.attack-output .ao-running { color: #fbbf24; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* ── Right panel ── */
+.right-stack { display: flex; flex-direction: column; gap: 12px; }
+
+.panel-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+}
+.panel-hdr {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* Heatmap */
+.heatmap { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.hm-row  { display: grid; grid-template-columns: 100px 1fr; gap: 6px; align-items: center; }
+.hm-tactic { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.hm-cell {
+  height: 28px; border-radius: 3px; display: flex; align-items: center;
+  justify-content: center; font-family: var(--mono); font-size: 10px;
+  background: var(--bg); color: var(--text-3); border: 1px solid var(--border);
+  transition: all 0.4s;
+}
+.hm-cell.detected { background: var(--green-bg); color: var(--green); border-color: #bbf7d0; }
+.hm-cell.missed   { background: var(--red-bg);   color: var(--red);   border-color: #fecaca; }
+
+/* Run all */
+.run-all-btn {
+  width: calc(100% - 28px); margin: 0 14px 14px;
+  padding: 8px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--white); color: var(--text-2); font-size: 11px;
+  font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+.run-all-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+.run-all-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Logs page ── */
+.logs-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.logs-count { font-size: 12px; color: var(--text-2); }
+
+.logs-table-wrap {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+}
+.logs-table { width: 100%; border-collapse: collapse; }
+.logs-table th {
+  text-align: left; padding: 9px 14px; font-size: 10px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-2); background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.logs-table td {
+  padding: 9px 14px; border-bottom: 1px solid var(--border);
+  font-size: 12px; vertical-align: top;
+}
+.logs-table tr:last-child td { border-bottom: none; }
+.logs-table tr:hover td { background: #f8f9fa; }
+
+.logs-table .td-time  { font-family: var(--mono); font-size: 10px; color: var(--text-3); white-space: nowrap; }
+.logs-table .td-tech  { font-family: var(--mono); font-size: 11px; color: var(--blue); white-space: nowrap; }
+.logs-table .td-rule  { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+.logs-table .td-eid   { font-family: var(--mono); font-size: 11px; }
+.logs-table .td-field { font-family: var(--mono); font-size: 10px; color: var(--text-2); max-width: 300px; word-break: break-all; }
+.logs-table .td-agent { font-size: 11px; color: var(--text-2); }
+
+.empty-logs {
+  text-align: center; padding: 48px; color: var(--text-3);
+  font-size: 12px;
+}
+
+/* ── Notifications ── */
+.notif-stack {
+  position: fixed; bottom: 20px; right: 20px;
+  display: flex; flex-direction: column; gap: 8px; z-index: 9999;
+  max-width: 320px;
+}
+.notif {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  display: flex; gap: 10px; align-items: flex-start;
+  animation: slideIn 0.2s ease; cursor: pointer;
+  border-left: 3px solid var(--border);
+}
+.notif.CRITICAL { border-left-color: var(--red); }
+.notif.HIGH     { border-left-color: var(--orange); }
+.notif.MEDIUM   { border-left-color: var(--yellow); }
+.notif.LOW      { border-left-color: var(--green); }
+
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { to { opacity: 0; transform: translateX(20px); } }
+
+.notif-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.notif-body { flex: 1; }
+.notif-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.notif-detail { font-family: var(--mono); font-size: 10px; color: var(--text-2); line-height: 1.5; }
+.notif-time { font-size: 10px; color: var(--text-3); margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-box">PT</div>
+    <div>
+      <div class="logo-text">Purple Team</div>
+      <div class="logo-sub">Holberton Cybersecurity</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="showPage('testing')" id="nav-testing">
+      <span class="nav-icon">⚡</span> Testing
+    </div>
+    <div class="nav-item" onclick="showPage('logs')" id="nav-logs">
+      <span class="nav-icon">📋</span> Alerts Log
+      <div class="nav-badge" id="logs-badge"></div>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="conn-row"><div class="conn-dot" id="dot-wazuh"></div> Wazuh Indexer</div>
+    <div class="conn-row"><div class="conn-dot" id="dot-victim"></div> Win10-Victim</div>
+    <div style="margin-top:6px;font-size:10px;color:#495057" id="last-update">—</div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Testing</div>
+    <div class="topbar-right">
+      <select class="window-select" id="window-select" onchange="setWindow(this.value)">
+        <option value="5">5 min</option>
+        <option value="10" selected>10 min</option>
+        <option value="30">30 min</option>
+        <option value="60">1 hour</option>
+        <option value="1440">24 h</option>
+        <option value="10080">7 days</option>
+      </select>
+      <div class="last-update" id="topbar-update">not yet polled</div>
+    </div>
+  </div>
+
+  <!-- Testing page -->
+  <div class="page active" id="page-testing">
+
+    <div class="summary-row" id="summary-row">
+      <div class="summary-card accent"><div class="s-val" id="s-det">—</div><div class="s-label">Detected</div></div>
+      <div class="summary-card"><div class="s-val" id="s-alerts">—</div><div class="s-label">Total Alerts</div></div>
+      <div class="summary-card"><div class="s-val" id="s-conf">—</div><div class="s-label">Avg Confidence</div></div>
+      <div class="summary-card"><div class="s-val" id="s-noise">—</div><div class="s-label">Avg Noise</div></div>
+    </div>
+
+    <div class="section-hdr">Detection Results</div>
+    <div class="two-col">
+      <div class="cards-stack" id="cards-stack"></div>
+      <div class="right-stack">
+        <div class="panel-card">
+          <div class="panel-hdr">ATT&amp;CK Coverage</div>
+          <div class="heatmap" id="heatmap"></div>
+          <button class="run-all-btn" id="run-all-btn" onclick="runAll()">▶ Run All Techniques</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs page -->
+  <div class="page" id="page-logs">
+    <div class="logs-toolbar">
+      <div class="section-hdr" style="margin:0;border:none">Live Wazuh Alerts — This Session</div>
+      <div class="logs-count" id="logs-count">Loading...</div>
+    </div>
+    <div class="logs-table-wrap">
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Technique</th>
+            <th>Rule</th>
+            <th>Level</th>
+            <th>Danger</th>
+            <th>EID</th>
+            <th>Key Field</th>
+            <th>Agent</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody"></tbody>
+      </table>
+      <div class="empty-logs" id="logs-empty" style="display:none">
+        No alerts captured this session yet.<br>
+        Run an attack from the Testing page to generate alerts.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Notification stack -->
+<div class="notif-stack" id="notif-stack"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let windowMin   = 10;
+let techniques  = {};
+let alertData   = {};
+let runningSet  = new Set();
+let unreadLogs  = 0;
+let onLogsPage  = false;
+
+const ORDER = ['T1059.001','T1547.001','T1087.001','T1003.001'];
+
+// ── Page nav ──────────────────────────────────────────────────────────────────
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`page-${p}`).classList.add('active');
+  document.getElementById(`nav-${p}`).classList.add('active');
+  document.getElementById('page-title').textContent =
+    p === 'testing' ? 'Testing' : 'Alerts Log';
+  onLogsPage = p === 'logs';
+  if (p === 'logs') {
+    unreadLogs = 0;
+    document.getElementById('logs-badge').classList.remove('show');
+    refreshLogs();
+  }
+}
+
+// ── Connection status ─────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const d = await (await fetch('/api/status')).json();
+    document.getElementById('dot-wazuh').className  = 'conn-dot ' + (d.indexer ? 'ok' : 'err');
+    document.getElementById('dot-victim').className = 'conn-dot ' + (d.winrm   ? 'ok' : 'err');
+  } catch {
+    document.getElementById('dot-wazuh').className  = 'conn-dot err';
+    document.getElementById('dot-victim').className = 'conn-dot err';
+  }
+}
+
+// ── Load techniques ───────────────────────────────────────────────────────────
+async function loadTechniques() {
+  techniques = await (await fetch('/api/techniques')).json();
+  renderCards();
+  renderHeatmap();
+}
+
+// ── Alerts poll ───────────────────────────────────────────────────────────────
+async function pollAlerts() {
+  try {
+    const resp = await fetch(`/api/alerts?window=${windowMin}`);
+    const data = await resp.json();
+    const detections = data.detections || {};
+    const newAlerts  = data.new_alerts  || [];
+
+    alertData = detections;
+    updateCards();
+    updateSummary();
+    updateHeatmap();
+
+    // Fire notifications for new alerts
+    newAlerts.forEach(a => showNotification(a));
+
+    // Update unread badge
+    if (newAlerts.length > 0 && !onLogsPage) {
+      unreadLogs += newAlerts.length;
+      document.getElementById('logs-badge').classList.add('show');
+    }
+    if (onLogsPage) refreshLogs();
+
+    const now = new Date().toISOString().slice(11,19) + 'Z';
+    document.getElementById('topbar-update').textContent = 'updated ' + now;
+    document.getElementById('last-update').textContent   = 'polled ' + now;
+
+  } catch(e) {
+    console.error('Poll failed:', e);
+  }
+}
+
+// ── Notification ──────────────────────────────────────────────────────────────
+const DANGER_ICON = { CRITICAL: '🔴', HIGH: '🟠', MEDIUM: '🟡', LOW: '🟢', INFO: '⚪' };
+
+function showNotification(alert) {
+  const stack = document.getElementById('notif-stack');
+  const div   = document.createElement('div');
+  div.className = `notif ${alert.danger}`;
+
+  const ts = alert.timestamp
+    ? new Date(alert.timestamp).toISOString().slice(11,19) + 'Z'
+    : '';
+
+  div.innerHTML = `
+    <div class="notif-icon">${DANGER_ICON[alert.danger] || '⚪'}</div>
+    <div class="notif-body">
+      <div class="notif-title">${alert.technique_id} — ${alert.danger}</div>
+      <div class="notif-detail">
+        Rule ${alert.rule_id} · Level ${alert.rule_level}<br>
+        ${alert.key_field_name ? alert.key_field_name + ': ' + (alert.key_field_value || '').slice(0,60) : ''}
+      </div>
+      <div class="notif-time">${ts}</div>
+    </div>`;
+
+  div.onclick = () => div.remove();
+  stack.appendChild(div);
+
+  // Auto-dismiss after 8s
+  setTimeout(() => {
+    div.style.animation = 'fadeOut 0.3s forwards';
+    setTimeout(() => div.remove(), 300);
+  }, 8000);
+
+  // Max 4 notifications visible
+  while (stack.children.length > 4) stack.removeChild(stack.firstChild);
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function updateSummary() {
+  const vals     = Object.values(alertData);
+  const detected = vals.filter(v => v.detected).length;
+  const alerts   = vals.reduce((s,v) => s + v.alert_count, 0);
+  const conf     = vals.length ? (vals.reduce((s,v) => s + v.confidence, 0) / vals.length).toFixed(1) : '—';
+  const noise    = vals.length ? (vals.reduce((s,v) => s + v.noise, 0)     / vals.length).toFixed(1) : '—';
+  document.getElementById('s-det').textContent    = vals.length ? `${detected}/${vals.length}` : '—';
+  document.getElementById('s-alerts').textContent = alerts || '—';
+  document.getElementById('s-conf').textContent   = conf !== '—' ? conf + '/5' : '—';
+  document.getElementById('s-noise').textContent  = noise !== '—' ? noise + '/5' : '—';
+}
+
+// ── Render cards ──────────────────────────────────────────────────────────────
+function renderCards() {
+  document.getElementById('cards-stack').innerHTML = ORDER.map(tid => {
+    const t = techniques[tid] || {};
+    const k = tid.replace(/\./g,'_');
+    return `
+    <div class="tcard" id="card-${k}">
+      <div class="tcard-header">
+        <div class="tcard-stripe"></div>
+        <div class="tcard-top">
+          <div>
+            <div class="tcard-id">${tid}</div>
+            <div class="tcard-name">${t.name || tid}</div>
+            <div class="tcard-tactic">${t.tactic || ''} &nbsp;·&nbsp;
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-3)">
+                ${(t.rule_ids||[]).map(r=>'#'+r).join(' ')}
+              </span>
+            </div>
+          </div>
+          <div class="tcard-right">
+            <div class="badge idle" id="badge-${k}"><div class="bdot"></div> WAITING</div>
+            <button class="run-btn" id="btn-${k}" onclick="runTechnique('${tid}')">▶ Run</button>
+          </div>
+        </div>
+      </div>
+      <div class="tcard-body">
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:10px">${t.description||''}</div>
+        <div class="tcard-meta">
+          <div>
+            <div class="meta-lbl">Rule Fired</div>
+            <div class="meta-val rule" id="rule-${k}">—</div>
+          </div>
+          <div>
+            <div class="meta-lbl">Confidence</div>
+            <div class="score-row">
+              <div class="score-track"><div class="score-fill" style="width:${(t.confidence||0)/5*100}%"></div></div>
+              <div class="score-n">${t.confidence||0}/5</div>
+            </div>
+          </div>
+          <div>
+            <div class="meta-lbl">Noise</div>
+            <div class="score-row">
+              <div class="score-track"><div class="score-fill noise" style="width:${(t.noise||0)/5*100}%"></div></div>
+              <div class="score-n">${t.noise||0}/5</div>
+            </div>
+          </div>
+        </div>
+        <div class="meta-lbl" style="margin-bottom:4px">Attack Command</div>
+        <div class="key-field" style="color:var(--text-2)">
+          <span class="kf-label">$</span>${t.command_preview||''}
+        </div>
+        <div class="key-field" id="kf-${k}" style="margin-top:6px;display:none">
+          <span class="kf-label" id="kfl-${k}"></span>
+          <span id="kfv-${k}"></span>
+        </div>
+        <div class="attack-output" id="ao-${k}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Update cards ──────────────────────────────────────────────────────────────
+function updateCards() {
+  for (const [tid, info] of Object.entries(alertData)) {
+    const k     = tid.replace(/\./g,'_');
+    const card  = document.getElementById(`card-${k}`);
+    const badge = document.getElementById(`badge-${k}`);
+    const rule  = document.getElementById(`rule-${k}`);
+    const kf    = document.getElementById(`kf-${k}`);
+    const kfl   = document.getElementById(`kfl-${k}`);
+    const kfv   = document.getElementById(`kfv-${k}`);
+    if (!card) continue;
+
+    if (runningSet.has(tid)) {
+      badge.className = 'badge running'; badge.innerHTML = '<div class="bdot"></div> RUNNING';
+    } else if (info.detected) {
+      card.className  = 'tcard detected';
+      badge.className = `badge danger-${info.danger}`;
+      badge.innerHTML = `<div class="bdot"></div> ${info.danger}`;
+      rule.textContent = info.rule_fired || '—';
+      if (info.key_field_name && info.key_field_value) {
+        kf.style.display = 'block';
+        kfl.textContent  = info.key_field_name + ': ';
+        kfv.textContent  = info.key_field_value;
+      }
+    } else {
+      card.className  = 'tcard missed';
+      badge.className = 'badge missed';
+      badge.innerHTML = '<div class="bdot"></div> NOT DETECTED';
+      rule.textContent = '—';
+      if (kf) kf.style.display = 'none';
+    }
+  }
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+function renderHeatmap() {
+  document.getElementById('heatmap').innerHTML = ORDER.map(tid => {
+    const t = techniques[tid] || {};
+    return `
+    <div class="hm-row">
+      <div class="hm-tactic">${(t.tactic||'').toUpperCase()}</div>
+      <div class="hm-cell" id="heat-${tid.replace(/\./g,'_')}">${tid}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateHeatmap() {
+  for (const [tid, info] of Object.entries(alertData)) {
+    const cell = document.getElementById(`heat-${tid.replace(/\./g,'_')}`);
+    if (cell) cell.className = 'hm-cell ' + (info.detected ? 'detected' : 'missed');
+  }
+}
+
+// ── Attack output polling ─────────────────────────────────────────────────────
+async function pollAttackOutput(tid) {
+  const k  = tid.replace(/\./g,'_');
+  const ao = document.getElementById(`ao-${k}`);
+  if (!ao) return;
+
+  const data = await (await fetch(`/api/attack-output/${tid}`)).json();
+
+  if (data.status === 'running') {
+    ao.className = 'attack-output show';
+    ao.innerHTML = '<span class="ao-running">⟳ Executing on Win10-Victim...</span>';
+    setTimeout(() => pollAttackOutput(tid), 2000);
+  } else if (data.status === 'done' || data.status === 'error') {
+    ao.className = 'attack-output show';
+    let html = '';
+    if (data.stdout) html += `<span class="ao-stdout">${escHtml(data.stdout)}</span>\n`;
+    if (data.stderr) html += `<span class="ao-stderr">${escHtml(data.stderr)}</span>`;
+    ao.innerHTML = html || '(no output)';
+    runningSet.delete(tid);
+    const btn = document.getElementById(`btn-${k}`);
+    if (btn) { btn.disabled = false; btn.className = 'run-btn'; btn.textContent = '▶ Run'; }
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Run attack ────────────────────────────────────────────────────────────────
+async function runTechnique(tid) {
+  if (runningSet.has(tid)) return;
+  const k   = tid.replace(/\./g,'_');
+  const btn = document.getElementById(`btn-${k}`);
+  const ao  = document.getElementById(`ao-${k}`);
+
+  runningSet.add(tid);
+  btn.disabled = true; btn.className = 'run-btn running'; btn.textContent = '⟳ Running';
+
+  const badge = document.getElementById(`badge-${k}`);
+  badge.className = 'badge running'; badge.innerHTML = '<div class="bdot"></div> RUNNING';
+
+  ao.className = 'attack-output show';
+  ao.innerHTML = '<span class="ao-running">⟳ Sending to Win10-Victim via WinRM...</span>';
+
+  try {
+    const d = await (await fetch(`/api/run/${tid}`, {method:'POST'})).json();
+    setTimeout(() => pollAttackOutput(tid), 2000);
+    setTimeout(() => pollAlerts(), (d.poll_after || 15) * 1000);
+  } catch(e) {
+    ao.innerHTML = `<span class="ao-stderr">Error: ${escHtml(e.message)}</span>`;
+    runningSet.delete(tid);
+    btn.disabled = false; btn.className = 'run-btn'; btn.textContent = '▶ Run';
+  }
+}
+
+async function runAll() {
+  const btn = document.getElementById('run-all-btn');
+  btn.disabled = true; btn.textContent = '⟳ Running all...';
+  for (const tid of ORDER) {
+    await runTechnique(tid);
+    await new Promise(r => setTimeout(r, 8000));
+  }
+  btn.disabled = false; btn.textContent = '▶ Run All Techniques';
+}
+
+// ── Logs page ─────────────────────────────────────────────────────────────────
+const DANGER_COLOR = {
+  CRITICAL: '#dc2626', HIGH: '#ea580c', MEDIUM: '#ca8a04', LOW: '#16a34a', INFO: '#6c757d'
+};
+
+async function refreshLogs() {
+  const logs = await (await fetch('/api/live-logs')).json();
+  const tbody = document.getElementById('logs-tbody');
+  const empty = document.getElementById('logs-empty');
+  const count = document.getElementById('logs-count');
+
+  count.textContent = logs.length + ' alert' + (logs.length !== 1 ? 's' : '') + ' this session';
+
+  if (logs.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = logs.map(l => {
+    const ts    = l.timestamp ? l.timestamp.slice(0,19).replace('T',' ') : l.logged_at.slice(0,19).replace('T',' ');
+    const color = DANGER_COLOR[l.danger] || '#6c757d';
+    return `
+    <tr>
+      <td class="td-time">${ts}</td>
+      <td class="td-tech">${l.technique_id}</td>
+      <td class="td-rule">${l.rule_id}</td>
+      <td><span style="font-family:var(--mono);font-size:11px">${l.rule_level}</span></td>
+      <td><span class="badge danger-${l.danger}" style="font-size:10px">${l.danger}</span></td>
+      <td class="td-eid">${l.event_id || '—'}</td>
+      <td class="td-field">
+        ${l.key_field_name ? `<span style="color:var(--text-3)">${l.key_field_name}:</span> ` : ''}
+        ${escHtml(l.key_field_value || '—')}
+      </td>
+      <td class="td-agent">${l.agent || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Window ────────────────────────────────────────────────────────────────────
+function setWindow(v) {
+  windowMin = parseInt(v);
+  pollAlerts();
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await checkStatus();
+  setInterval(checkStatus, 30000);
+  await loadTechniques();
+  pollAlerts();
+  setInterval(pollAlerts, 5000);
+})();
+</script>
+</body>
+</html>
